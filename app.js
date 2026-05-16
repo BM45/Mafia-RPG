@@ -1,860 +1,1246 @@
-// ═══════════════════════════════════════════════════════
-// AUDIO ENGINE
-// ═══════════════════════════════════════════════════════
-let audioCtx = null;
-
-function getAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-
-function playTone(freq, type, dur, vol, delay=0, freqEnd=null) {
-  try {
-    const ctx = getAudio();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-    if (freqEnd) osc.frequency.linearRampToValueAtTime(freqEnd, ctx.currentTime + delay + dur);
-    gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
-    osc.start(ctx.currentTime + delay);
-    osc.stop(ctx.currentTime + delay + dur);
-  } catch(e) {}
-}
-
-const SFX = {
-  success() {
-    playTone(330, 'sine', .08, .18);
-    playTone(440, 'sine', .08, .18, .09);
-    playTone(550, 'sine', .15, .18, .18);
-  },
-  fail() {
-    playTone(200, 'sawtooth', .2, .15, 0, 80);
-  },
-  cash() {
-    playTone(600, 'sine', .06, .12);
-    playTone(800, 'sine', .06, .12, .07);
-  },
-  bust() {
-    playTone(180, 'square', .08, .15);
-    playTone(160, 'square', .08, .15, .09);
-    playTone(140, 'square', .12, .12, .18);
-  },
-  levelUp() {
-    [330,392,494,659].forEach((f,i) => playTone(f,'sine',.12,.2,i*.1));
-  },
-  travel() {
-    playTone(440, 'sine', .06, .1, 0, 550);
-  },
-  attack() {
-    playTone(120, 'sawtooth', .04, .2);
-    playTone(80, 'square', .08, .18, .05, 40);
-  },
-  win() {
-    [440,550,660,880].forEach((f,i) => playTone(f,'sine',.15,.15,i*.08));
-  },
-  click() {
-    playTone(800, 'sine', .04, .06);
-  },
-  mission() {
-    [494,587,740].forEach((f,i) => playTone(f,'sine',.1,.18,i*.09));
-  }
+// ═══════════════════════════════════════════════════════════════
+// STORAGE — artifact persistent storage API
+// ═══════════════════════════════════════════════════════════════
+const storage = window.storage || {
+  async get(k,s){try{const v=localStorage.getItem((s?'shared_':'')+k);return v?{value:v}:null}catch{return null}},
+  async set(k,v,s){try{localStorage.setItem((s?'shared_':'')+k,v);return{value:v}}catch{return null}},
+  async list(p,s){try{const keys=Object.keys(localStorage).filter(k=>k.startsWith((s?'shared_':'')+p));return{keys:keys.map(k=>k.replace(s?'shared_':'',''))}}catch{return{keys:[]}}}
 };
 
-// ═══════════════════════════════════════════════════════
-// DATA DEFINITIONS
-// ═══════════════════════════════════════════════════════
-const DISTRICTS = [
-  { id:0, name:'Downtown',   x:300, y:190, svgX:204, svgY:134, w:192, h:112 },
-  { id:1, name:'Northside',  x:300, y:65,  svgX:204, svgY:4,   w:192, h:122 },
-  { id:2, name:'The Docks',  x:100, y:190, svgX:4,   svgY:134, w:192, h:112 },
-  { id:3, name:'Eastgate',   x:500, y:190, svgX:404, svgY:134, w:192, h:112 },
-  { id:4, name:'Southport',  x:300, y:315, svgX:204, svgY:254, w:192, h:122 },
-  { id:5, name:'Westside',   x:100, y:65,  svgX:4,   svgY:4,   w:192, h:122 },
-  { id:6, name:'Industrial', x:100, y:315, svgX:4,   svgY:254, w:192, h:122 },
-  { id:7, name:'Richlands',  x:500, y:65,  svgX:404, svgY:4,   w:192, h:122 },
-  { id:8, name:'Bayfront',   x:500, y:315, svgX:404, svgY:254, w:192, h:122 },
+// ═══════════════════════════════════════════════════════════════
+// AUDIO
+// ═══════════════════════════════════════════════════════════════
+let audioCtx=null;
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playTone(freq,type,dur,vol,delay=0,freqEnd=null){
+  try{const ctx=getAudio(),osc=ctx.createOscillator(),gain=ctx.createGain();
+  osc.connect(gain);gain.connect(ctx.destination);osc.type=type;
+  osc.frequency.setValueAtTime(freq,ctx.currentTime+delay);
+  if(freqEnd)osc.frequency.linearRampToValueAtTime(freqEnd,ctx.currentTime+delay+dur);
+  gain.gain.setValueAtTime(vol,ctx.currentTime+delay);
+  gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+dur);
+  osc.start(ctx.currentTime+delay);osc.stop(ctx.currentTime+delay+dur);}catch(e){}
+}
+const SFX={
+  success(){playTone(330,'sine',.08,.18);playTone(440,'sine',.08,.18,.09);playTone(550,'sine',.15,.18,.18)},
+  fail(){playTone(200,'sawtooth',.2,.15,0,80)},
+  cash(){playTone(600,'sine',.06,.12);playTone(800,'sine',.06,.12,.07)},
+  bust(){playTone(180,'square',.08,.15);playTone(160,'square',.08,.15,.09);playTone(140,'square',.12,.12,.18)},
+  levelUp(){[330,392,494,659].forEach((f,i)=>playTone(f,'sine',.12,.2,i*.1))},
+  travel(){playTone(440,'sine',.06,.1,0,550)},
+  attack(){playTone(120,'sawtooth',.04,.2);playTone(80,'square',.08,.18,.05,40)},
+  win(){[440,550,660,880].forEach((f,i)=>playTone(f,'sine',.15,.15,i*.08))},
+  click(){playTone(800,'sine',.04,.06)},
+  mission(){[494,587,740].forEach((f,i)=>playTone(f,'sine',.1,.18,i*.09))},
+  buy(){playTone(500,'sine',.06,.1);playTone(650,'sine',.08,.1,.07)}
+};
+
+// ═══════════════════════════════════════════════════════════════
+// STATIC DATA
+// ═══════════════════════════════════════════════════════════════
+const DISTRICTS=[
+  {id:0,name:'Downtown',x:300,y:190},{id:1,name:'Northside',x:300,y:65},
+  {id:2,name:'The Docks',x:100,y:190},{id:3,name:'Eastgate',x:500,y:190},
+  {id:4,name:'Southport',x:300,y:315},{id:5,name:'Westside',x:100,y:65},
+  {id:6,name:'Industrial',x:100,y:315},{id:7,name:'Richlands',x:500,y:65},
+  {id:8,name:'Bayfront',x:500,y:315}
+];
+const GANG_DEFS=[
+  {id:'serpents',name:'Serpents',color:'#4a8a50',initPower:30,initTurf:[1,5]},
+  {id:'reds',name:'Red Kings',color:'#b52a1d',initPower:45,initTurf:[3,7]},
+  {id:'harbor',name:'Harbor Co.',color:'#2a5a9a',initPower:25,initTurf:[2,6]},
+  {id:'none',name:'Neutral',color:'#5a5548',initPower:0,initTurf:[0,4,8]}
+];
+const GANG_COLORS={serpents:'#4a8a50',reds:'#b52a1d',harbor:'#2a5a9a',player:'#e8b830',none:'#252219'};
+const REP_TIERS=['STREET RAT','ASSOCIATE','SOLDIER','CAPO','BOSS'];
+const REP_THRESHOLDS=[0,20,60,120,200];
+const D_NEIGHBORS={0:[1,2,3,4],1:[0,5,7],2:[0,5,6],3:[0,7,8],4:[0,6,8],5:[1,2],6:[2,4],7:[1,3],8:[3,4]};
+
+const CAR_CLASSES={
+  sports:{label:'SPORTS',color:'#5090cc'},muscle:{label:'MUSCLE',color:'#e03020'},
+  luxury:{label:'LUXURY',color:'#e8b830'},truck:{label:'TRUCK',color:'#5a5548'},
+  bike:{label:'BIKE',color:'#5aaa5a'},armored:{label:'ARMORED',color:'#9a6acc'},
+  hyper:{label:'HYPER',color:'#ff6600'}
+};
+
+const CAR_DATABASE=[
+  {brand:'Honda',model:'Civic',year:1998,cls:'sports',rarity:'common',baseValue:800,speed:55,storage:2,heat:1,escapeBonus:5,missionBonus:5},
+  {brand:'Ford',model:'Mustang GT',year:2005,cls:'muscle',rarity:'common',baseValue:4500,speed:72,storage:1,heat:2,escapeBonus:12,missionBonus:10},
+  {brand:'BMW',model:'M5',year:2019,cls:'luxury',rarity:'uncommon',baseValue:28000,speed:82,storage:2,heat:3,escapeBonus:20,missionBonus:18},
+  {brand:'Mercedes',model:'G-Wagon',year:2021,cls:'luxury',rarity:'uncommon',baseValue:35000,speed:70,storage:4,heat:2,escapeBonus:15,missionBonus:20},
+  {brand:'Dodge',model:'Challenger SRT',year:2020,cls:'muscle',rarity:'uncommon',baseValue:18000,speed:85,storage:1,heat:3,escapeBonus:18,missionBonus:14},
+  {brand:'Ford',model:'F-150 Raptor',year:2022,cls:'truck',rarity:'common',baseValue:12000,speed:60,storage:6,heat:1,escapeBonus:8,missionBonus:22},
+  {brand:'Ducati',model:'Panigale V4',year:2023,cls:'bike',rarity:'uncommon',baseValue:22000,speed:95,storage:0,heat:2,escapeBonus:35,missionBonus:8},
+  {brand:'Lamborghini',model:'Huracán',year:2022,cls:'hyper',rarity:'rare',baseValue:280000,speed:98,storage:1,heat:5,escapeBonus:45,missionBonus:25},
+  {brand:'Rolls Royce',model:'Phantom',year:2023,cls:'luxury',rarity:'rare',baseValue:450000,speed:65,storage:3,heat:2,escapeBonus:20,missionBonus:35},
+  {brand:'Toyota',model:'Land Cruiser',year:2019,cls:'truck',rarity:'common',baseValue:8500,speed:58,storage:5,heat:1,escapeBonus:10,missionBonus:18},
+  {brand:'Audi',model:'RS7',year:2021,cls:'sports',rarity:'uncommon',baseValue:32000,speed:88,storage:2,heat:2,escapeBonus:25,missionBonus:20},
+  {brand:'Cadillac',model:'Escalade ESV',year:2022,cls:'luxury',rarity:'uncommon',baseValue:40000,speed:63,storage:5,heat:2,escapeBonus:12,missionBonus:28},
+  {brand:'Bugatti',model:'Chiron',year:2021,cls:'hyper',rarity:'legendary',baseValue:3200000,speed:100,storage:0,heat:5,escapeBonus:60,missionBonus:20},
+  {brand:'Mercedes',model:'Sprinter (Blacked)',year:2020,cls:'truck',rarity:'uncommon',baseValue:14000,speed:52,storage:10,heat:2,escapeBonus:5,missionBonus:40},
+  {brand:'Range Rover',model:'SVR',year:2022,cls:'luxury',rarity:'uncommon',baseValue:36000,speed:75,storage:4,heat:2,escapeBonus:22,missionBonus:25}
 ];
 
-const GANGS = [
-  { id:'serpents', name:'Serpents',   color:'#4a8a50', power:30, turf:[1,5],   desc:'Old guard. Control the north.' },
-  { id:'reds',     name:'Red Kings',  color:'#b52a1d', power:45, turf:[3,7],   desc:'Violent. Deep pockets.' },
-  { id:'harbor',   name:'Harbor Co.', color:'#2a5a9a', power:25, turf:[2,6],   desc:'Smugglers. Own the docks.' },
-  { id:'none',     name:'Neutral',    color:'#5a5548', power:0,  turf:[0,4,8], desc:'' },
+const PROPERTY_DEFS=[
+  {id:'apartment',name:'Apartment',icon:'🏠',location:'Downtown',desc:'A low-key safehouse. Basic storage and crew housing.',cost:5000,income:200,storage:5,crewSlots:2,bonus:'escape',category:'safehouse'},
+  {id:'warehouse',name:'Warehouse',icon:'🏭',location:'Industrial',desc:'Large storage for contraband, vehicles and operations base.',cost:15000,income:500,storage:20,crewSlots:5,bonus:'storage',category:'safehouse'},
+  {id:'mansion',name:'Mansion',icon:'🏰',location:'Richlands',desc:'A luxury estate. Crew morale boost and passive income.',cost:80000,income:2000,storage:10,crewSlots:10,bonus:'income',category:'property'},
+  {id:'bunker',name:'Hidden Bunker',icon:'🔒',location:'Industrial',desc:'Underground operations center. Maximum security.',cost:50000,income:800,storage:15,crewSlots:8,bonus:'escape',category:'safehouse'},
+  {id:'drug-lab',name:'Drug Lab',icon:'⚗️',location:'Southport',desc:'Produces drug supply automatically each day. High risk.',cost:25000,income:1200,storage:3,crewSlots:3,bonus:'drugs',category:'operation'},
+  {id:'chop-shop',name:'Chop Shop',icon:'🔧',location:'The Docks',desc:'Strip stolen cars for parts. +50% sell value on all vehicles.',cost:20000,income:400,storage:8,crewSlots:4,bonus:'cars',category:'operation'},
+  {id:'casino-front',name:'Casino Front',icon:'🎲',location:'Downtown',desc:'Launder money through the tables. Doubles casino winnings.',cost:60000,income:1500,storage:2,crewSlots:6,bonus:'casino',category:'operation'},
+  {id:'port-dock',name:'Port Dock',icon:'⚓',location:'Bayfront',desc:'International smuggling hub. Unlocks Cartel operations.',cost:45000,income:1000,storage:25,crewSlots:8,bonus:'smuggle',category:'operation'}
 ];
 
-const GANG_COLORS = { serpents:'#4a8a50', reds:'#b52a1d', harbor:'#2a5a9a', player:'#e8b830', none:'#252219' };
-
-const REP_TIERS = ['STREET RAT','ASSOCIATE','SOLDIER','CAPO','BOSS'];
-const REP_THRESHOLDS = [0, 20, 60, 120, 200];
-
-const MISSIONS = [
-  {
-    id:'m0', title:'First Blood', locked:false, done:false, active:false,
-    desc:'The streets don\'t respect talk. Commit 3 crimes to prove yourself.',
-    reward:{ cash:200, xp:30, respect:5 },
-    req:null,
-    type:'crimes', goal:3, progress:0
-  },
-  {
-    id:'m1', title:'Moving On Up', locked:true, done:false, active:false,
-    desc:'Reach level 3. The bosses are watching.',
-    reward:{ cash:400, xp:50, respect:10 },
-    req:'level:3', reqLabel:'Requires Level 3',
-    type:'level', goal:3, progress:0
-  },
-  {
-    id:'m2', title:'Territorial', locked:true, done:false, active:false,
-    desc:'Claim your first district. Show the gangs who runs this city.',
-    reward:{ cash:500, xp:60, respect:15 },
-    req:'level:2', reqLabel:'Requires Level 2',
-    type:'turf', goal:1, progress:0
-  },
-  {
-    id:'m3', title:'The Syndicate', locked:true, done:false, active:false,
-    desc:'Control 3 districts simultaneously. You\'re building an empire.',
-    reward:{ cash:1500, xp:150, respect:40 },
-    req:'turf:3', reqLabel:'Requires 3 Districts',
-    type:'turf', goal:3, progress:0
-  },
-  {
-    id:'m4', title:'High Roller', locked:true, done:false, active:false,
-    desc:'Win $500 at the casino in a single run.',
-    reward:{ cash:800, xp:80, respect:20 },
-    req:'level:2', reqLabel:'Requires Level 2',
-    type:'casinowin', goal:500, progress:0
-  },
-  {
-    id:'m5', title:'Top of the Food Chain', locked:true, done:false, active:false,
-    desc:'Achieve CAPO reputation. The city fears your name.',
-    reward:{ cash:3000, xp:300, respect:80 },
-    req:'rep:3', reqLabel:'Requires SOLDIER rank',
-    type:'rep', goal:3, progress:0
-  },
+const MISSION_DEFS=[
+  {id:'m0',title:'First Blood',desc:'Commit 5 crimes to prove yourself on the streets.',reward:{cash:300,xp:30,respect:5},req:null,type:'crimes',goal:5},
+  {id:'m1',title:'Moving On Up',desc:'Reach level 3. The bosses are watching.',reward:{cash:500,xp:50,respect:10},req:'level:3',reqLabel:'Requires Level 3',type:'level',goal:3},
+  {id:'m2',title:'Territorial',desc:'Claim your first district. Show the gangs who runs this city.',reward:{cash:600,xp:60,respect:15},req:'level:2',reqLabel:'Requires Level 2',type:'turf',goal:1},
+  {id:'m3',title:'The Syndicate',desc:'Control 3 districts simultaneously.',reward:{cash:2000,xp:150,respect:40},req:'turf:1',reqLabel:'Requires 1 District',type:'turf',goal:3},
+  {id:'m4',title:'High Roller',desc:'Win $1000 or more at the casino in one go.',reward:{cash:1000,xp:80,respect:20},req:'level:2',reqLabel:'Requires Level 2',type:'casinowin',goal:1000},
+  {id:'m5',title:'Top of the Food Chain',desc:'Achieve CAPO reputation.',reward:{cash:5000,xp:300,respect:80},req:'rep:3',reqLabel:'Requires SOLDIER rank',type:'rep',goal:3},
+  {id:'m6',title:'Car Collector',desc:'Acquire 3 vehicles for your garage.',reward:{cash:1500,xp:100,respect:25},req:'level:3',reqLabel:'Requires Level 3',type:'cars',goal:3},
+  {id:'m7',title:'Kingpin',desc:'Own 3 properties.',reward:{cash:8000,xp:400,respect:100},req:'rep:2',reqLabel:'Requires SOLDIER rank',type:'properties',goal:3},
+  {id:'m8',title:'Big Score',desc:'Complete a bank heist successfully.',reward:{cash:3000,xp:200,respect:50},req:'level:5',reqLabel:'Requires Level 5',type:'heist',goal:1},
+  {id:'m9',title:'The Empire',desc:'Control all 9 districts.',reward:{cash:25000,xp:1000,respect:300},req:'rep:4',reqLabel:'Requires CAPO rank',type:'turf',goal:9}
 ];
 
-// ═══════════════════════════════════════════════════════
+const ITEM_DATA={
+  lockpick:{cost:150,label:'Lockpick',use:'crime:store:+15'},
+  gloves:{cost:100,label:'Gloves',use:'crime:all:+10'},
+  fakeid:{cost:200,label:'Fake ID',use:'bust:-2'},
+  weapon:{cost:350,label:'Piece',use:'attack:+20'},
+  vest:{cost:300,label:'Vest',use:'damage:-30'},
+  'hacking-kit':{cost:400,label:'Hacking Kit',use:'crime:hack:+25'},
+  scanner:{cost:250,label:'Police Scanner',use:'bust:-40'},
+  energy:{cost:50,label:'Energy Drink',use:'energy:+40'},
+  'drugs-supply':{cost:500,label:'Drug Supply',use:'crime:drugs:enable'},
+  explosives:{cost:800,label:'Explosives',use:'crime:heist:enable'},
+  'burner-phone':{cost:120,label:'Burner Phone',use:'wanted:-1'},
+  drone:{cost:600,label:'Spy Drone',use:'crime:heist:+30'},
+  medkit:{cost:80,label:'Med Kit',use:'health:+50'},
+  lawyer:{cost:1000,label:'Lawyer',use:'wanted:clear'},
+  silencer:{cost:450,label:'Silencer',use:'heat:-50'},
+  'stash-bag':{cost:150,label:'Stash Bag',use:'loot:+25'}
+};
+
+const GARAGE_UPGRADES=[
+  {id:'small',name:'Small Garage',slots:3,cost:0,label:'Starting garage'},
+  {id:'warehouse-garage',name:'Warehouse Garage',slots:6,cost:10000,label:'Fits 6 vehicles'},
+  {id:'luxury-showroom',name:'Luxury Showroom',slots:10,cost:40000,label:'Fits 10 vehicles'},
+  {id:'underground',name:'Underground Garage',slots:20,cost:100000,label:'Hidden — 20 vehicles, no heat'}
+];
+
+// ═══════════════════════════════════════════════════════════════
 // GAME STATE
-// ═══════════════════════════════════════════════════════
-let player = null;
-let cooldownInterval = null;
-let cooldownMax = 0;
-let selectedDistrict = null;
-let districtOwners = {};  // districtId -> gangId
-let gangPowers = {};      // gangId -> power
-let missions = [];
-let logCount = 0;
+// ═══════════════════════════════════════════════════════════════
+let player=null;
+let districtOwners={};
+let gangPowers={};
+let missions=[];
+let garage=[];        // array of car objects
+let properties=[];   // array of owned property ids
+let garageLevel=0;   // index into GARAGE_UPGRADES
+let selectedDistrict=null;
+let cooldownInterval=null;
+let cooldownMax=0;
+let logCount=0;
+let casinoStats={won:0,lost:0,bigWin:0,streak:0};
+let activeGarageTab='owned';
+let shadownetPosts=[];
+let allPlayers=[];
+let playerId=null;
 
-const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
 
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('mafia_save')) {
-    $('load-btn').style.display = 'block';
-  }
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',async()=>{
   buildRepTrack();
+  playerId='pid_'+Math.random().toString(36).slice(2,10);
+  // Show load button if save exists
+  try{
+    const s=await storage.get('player_save_'+playerId,false);
+    const ls=localStorage.getItem('mafia_local_pid');
+    if(ls){playerId=ls;}
+    const localSave=localStorage.getItem('mafia_v3_save');
+    if(localSave){$('load-btn').style.display='block';}
+  }catch(e){}
+  localStorage.setItem('mafia_local_pid',playerId);
+  // Hide loader
+  setTimeout(()=>{$('loading-overlay').classList.add('hidden');addLog('Welcome to the city. Build your empire.','info');},1200);
+  // Load shadow feed
+  loadShadowFeed();
+  loadAllPlayers();
 });
 
-function buildRepTrack() {
-  const el = $('repTrack');
-  el.innerHTML = '';
-  for (let i = 0; i < REP_TIERS.length - 1; i++) {
-    const div = document.createElement('div');
-    div.className = 'rep-tier';
-    div.id = 'rep-tier-' + i;
-    el.appendChild(div);
-  }
+function buildRepTrack(){
+  const el=$('repTrack');el.innerHTML='';
+  for(let i=0;i<4;i++){const d=document.createElement('div');d.className='rep-tier';d.id='rep-tier-'+i;el.appendChild(d);}
 }
 
-function initWorld() {
-  districtOwners = {};
-  gangPowers = {};
-  GANGS.forEach(g => {
-    gangPowers[g.id] = g.power;
-    g.turf.forEach(d => { districtOwners[d] = g.id; });
-  });
-  missions = JSON.parse(JSON.stringify(MISSIONS));
-}
-
-// ═══════════════════════════════════════════════════════
-// CREATE / SHOW GAME
-// ═══════════════════════════════════════════════════════
-function createPlayer() {
-  const name = $('playerName').value.trim();
-  if (!name) return showToast('Enter a name first', 'warn');
+// ═══════════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function switchTab(name){
+  document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  $('tab-'+name).classList.add('active');
+  const tabs=$('nav-tabs').querySelectorAll('.nav-tab');
+  const map=['home','city','garage','realestate','missions','market','casino','shadownet','players'];
+  const idx=map.indexOf(name);
+  if(idx>=0)tabs[idx].classList.add('active');
+  if(name==='garage')renderGarageTab();
+  if(name==='realestate')renderProperties();
+  if(name==='city'&&player)renderMap();
+  if(name==='shadownet')loadShadowFeed();
+  if(name==='players')loadAllPlayers();
   SFX.click();
+}
 
-  player = {
-    name, level:1, xp:0,
-    cash:200, health:100, energy:100,
-    respect:0, wanted:0,
-    day:1, hour:8,
-    inventory:[], cooldown:0,
-    currentDistrict:0,
-    turfOwned:[], takedowns:0,
-    casinoWinStreak:0
+// ═══════════════════════════════════════════════════════════════
+// CREATE / LOAD PLAYER
+// ═══════════════════════════════════════════════════════════════
+function createPlayer(){
+  const name=$('playerName').value.trim();
+  if(!name)return showToast('Enter a name','warn');
+  SFX.click();
+  player={
+    name,level:1,xp:0,cash:500,health:100,energy:100,
+    respect:0,wanted:0,day:1,hour:8,
+    inventory:[],cooldown:0,
+    currentDistrict:0,turfOwned:[],takedowns:0,
+    crimeCount:0,heistCount:0,
+    casinoWon:0,casinoLost:0,casinoBigWin:0,casinoStreak:0,
+    activeCar:null
   };
-
+  garage=[];properties=[];garageLevel=0;missions=[];districtOwners={};gangPowers={};
   initWorld();
   showGame();
-  addLog(player.name + ' hit the streets. Welcome to the city.', 'info');
+  addLog(player.name+' hit the streets.','info');
   startCooldown();
   renderAll();
+  saveGame();
+  publishPlayerProfile();
 }
 
-function showGame() {
-  $('start-screen').style.display = 'none';
-  ['stats-panel','map-panel','actions-panel','gang-panel','missions-panel','shop-panel','casino-panel'].forEach(id => {
-    $(id).style.display = 'block';
+function initWorld(){
+  GANG_DEFS.forEach(g=>{
+    gangPowers[g.id]=g.initPower;
+    g.initTurf.forEach(d=>{districtOwners[d]=g.id;});
   });
-  renderGangList();
-  renderMissions();
-  renderMap();
+  missions=MISSION_DEFS.map(m=>({...m,done:false,active:false,progress:0,locked:!!m.req}));
 }
 
-// ═══════════════════════════════════════════════════════
-// SAVE / LOAD
-// ═══════════════════════════════════════════════════════
-function saveGame() {
-  if (!player) return showToast('No game to save', 'warn');
-  SFX.click();
-  const save = { player, districtOwners, gangPowers, missions };
-  localStorage.setItem('mafia_save', JSON.stringify(save));
-  showToast('Game saved', 'info');
-  addLog('Game saved.', 'info');
+function showGame(){
+  $('start-screen').style.display='none';
+  ['stats-panel','actions-panel','log-panel'].forEach(id=>{$(id).style.display='block';});
 }
 
-function loadGame() {
-  const raw = localStorage.getItem('mafia_save');
-  if (!raw) return showToast('No save found', 'warn');
-  SFX.click();
-  try {
-    const save = JSON.parse(raw);
-    player = save.player;
-    districtOwners = save.districtOwners;
-    gangPowers = save.gangPowers;
-    missions = save.missions;
-    showGame();
-    startCooldown();
-    renderAll();
-    addLog('Save loaded. Welcome back, ' + player.name + '.', 'info');
-    showToast('Save loaded', 'info');
-  } catch(e) {
-    showToast('Corrupt save data', 'warn');
-  }
+// ═══════════════════════════════════════════════════════════════
+// SAVE / LOAD (local + shared)
+// ═══════════════════════════════════════════════════════════════
+async function saveGame(){
+  if(!player)return;
+  const save={player,districtOwners,gangPowers,missions,garage,properties,garageLevel,casinoStats};
+  localStorage.setItem('mafia_v3_save',JSON.stringify(save));
+  await storage.set('player_save_'+playerId,JSON.stringify(save),false);
+  await publishPlayerProfile();
+  showToast('Saved','info');
 }
 
-// ═══════════════════════════════════════════════════════
+async function loadGame(){
+  const raw=localStorage.getItem('mafia_v3_save');
+  if(!raw)return showToast('No save found','warn');
+  try{
+    const s=JSON.parse(raw);
+    player=s.player;districtOwners=s.districtOwners;gangPowers=s.gangPowers;
+    missions=s.missions||MISSION_DEFS.map(m=>({...m,done:false,active:false,progress:0,locked:!!m.req}));
+    garage=s.garage||[];properties=s.properties||[];garageLevel=s.garageLevel||0;
+    casinoStats=s.casinoStats||{won:0,lost:0,bigWin:0,streak:0};
+    showGame();startCooldown();renderAll();
+    addLog('Save loaded. Welcome back, '+player.name+'.','info');
+    showToast('Game loaded','info');
+    SFX.click();
+  }catch(e){showToast('Corrupt save','warn');}
+}
+
+async function publishPlayerProfile(){
+  if(!player)return;
+  const profile={
+    id:playerId,name:player.name,level:player.level,
+    rep:REP_TIERS[getRepTier()],repTier:getRepTier(),
+    cash:player.cash,respect:player.respect,
+    turf:player.turfOwned.length,takedowns:player.takedowns,
+    cars:garage.length,properties:properties.length,
+    activeCar:player.activeCar?`${player.activeCar.brand} ${player.activeCar.model}`:'none',
+    lastSeen:Date.now()
+  };
+  await storage.set('profile_'+playerId,JSON.stringify(profile),true);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // COOLDOWN
-// ═══════════════════════════════════════════════════════
-function startCooldown() {
-  if (cooldownInterval) return;
-  cooldownInterval = setInterval(() => {
-    if (!player) return;
-    if (player.cooldown > 0) player.cooldown--;
-    if (player) {
-      const pct = cooldownMax > 0 ? (player.cooldown / cooldownMax * 100) : 0;
-      $('cooldownFill').style.width = pct + '%';
-      $('cooldownText').textContent = player.cooldown > 0 ? 'COOLING DOWN — ' + player.cooldown + 's' : 'READY';
-    }
-  }, 1000);
+// ═══════════════════════════════════════════════════════════════
+function startCooldown(){
+  if(cooldownInterval)return;
+  cooldownInterval=setInterval(()=>{
+    if(!player)return;
+    if(player.cooldown>0)player.cooldown--;
+    const pct=cooldownMax>0?(player.cooldown/cooldownMax*100):0;
+    $('cooldownFill').style.width=pct+'%';
+    $('cooldownText').textContent=player.cooldown>0?'COOLING DOWN — '+player.cooldown+'s':'READY';
+  },1000);
 }
 
-// ═══════════════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════════════
-function renderAll() {
-  if (!player) return;
-  updateStats();
-  updateHUD();
-  updateInventoryUI();
-  renderMap();
-  renderMissions();
-  renderGangList();
+// ═══════════════════════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════════════════════
+function renderAll(){
+  if(!player)return;
+  updateStats();updateHUD();updateInventoryUI();
+  renderGangList();renderMissions();renderMap();
+  updateCasinoStats();renderProperties();
 }
 
-function updateStats() {
-  $('playerNameDisplay').textContent = player.name;
-  $('levelBadge').textContent = player.level;
-  $('sc-cash').textContent = '$' + player.cash;
-  $('sc-respect').textContent = player.respect;
-  $('sc-turf').textContent = player.turfOwned.length;
-  $('sc-kills').textContent = player.takedowns;
-  $('bar-health').style.width = player.health + '%';
-  $('val-health').textContent = player.health;
-  $('bar-energy').style.width = player.energy + '%';
-  $('val-energy').textContent = player.energy;
-  const xpNeeded = player.level * 50;
-  const xpInLevel = player.xp % xpNeeded;
-  $('bar-xp').style.width = (xpInLevel / xpNeeded * 100) + '%';
-  $('val-xp').textContent = xpInLevel + ' / ' + xpNeeded;
-
-  // Stars
-  $('wantedStars').querySelectorAll('.star').forEach((s,i) => s.classList.toggle('active', i < player.wanted));
-
-  // Reputation tier
-  const tier = getRepTier();
-  $('repBadge').textContent = REP_TIERS[tier];
-  for (let i = 0; i < 4; i++) {
-    const el = $('rep-tier-' + i);
-    if (el) el.classList.toggle('filled', i < tier);
-  }
+function updateStats(){
+  $('playerNameDisplay').textContent=player.name;
+  $('levelBadge').textContent=player.level;
+  $('repBadge').textContent=REP_TIERS[getRepTier()];
+  $('sc-cash').textContent='$'+player.cash.toLocaleString();
+  $('sc-respect').textContent=player.respect;
+  $('sc-turf').textContent=player.turfOwned.length;
+  $('sc-props').textContent=properties.length;
+  $('bar-health').style.width=player.health+'%';$('val-health').textContent=player.health;
+  $('bar-energy').style.width=player.energy+'%';$('val-energy').textContent=player.energy;
+  const xpNeeded=player.level*50,xpIn=player.xp%xpNeeded;
+  $('bar-xp').style.width=(xpIn/xpNeeded*100)+'%';$('val-xp').textContent=xpIn+'/'+xpNeeded;
+  $('wantedStars').querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('active',i<player.wanted));
+  const tier=getRepTier();
+  $('repBadge').textContent=REP_TIERS[tier];
+  for(let i=0;i<4;i++){const el=$('rep-tier-'+i);if(el)el.classList.toggle('filled',i<tier);}
+  $('active-car-hud').textContent=player.activeCar?'🚗 '+player.activeCar.brand+' '+player.activeCar.model:'No vehicle';
 }
 
-function updateHUD() {
-  const h = String(player.hour).padStart(2,'0');
-  $('hud-center').textContent = 'Day ' + player.day + '  ·  ' + h + ':00  ·  ' + DISTRICTS[player.currentDistrict].name.toUpperCase();
-  $('hud-cash').textContent = '$' + player.cash;
-  $('hud-wanted').textContent = '★'.repeat(player.wanted) + '☆'.repeat(5 - player.wanted);
-  $('hud-rep').textContent = REP_TIERS[getRepTier()];
+function updateHUD(){
+  $('hud-cash').textContent='$'+player.cash.toLocaleString();
+  $('hud-wanted').textContent='★'.repeat(player.wanted)+'☆'.repeat(5-player.wanted);
+  const h=String(player.hour).padStart(2,'0');
+  $('day-label').textContent=player.day;$('time-label').textContent=h+':00';
+  $('city-district-label').textContent=DISTRICTS[player.currentDistrict].name.toUpperCase();
+  const turfIncome=player.turfOwned.length*20*(getRepTier()+1);
+  const propIncome=properties.reduce((s,pid)=>{const p=PROPERTY_DEFS.find(x=>x.id===pid);return s+(p?p.income:0);},0);
+  $('income-label').textContent='$'+turfIncome.toLocaleString()+'/day';
+  $('prop-income-label').textContent='$'+propIncome.toLocaleString()+'/day';
+  $('vehicle-label').textContent=player.activeCar?player.activeCar.brand+' '+player.activeCar.model:'none';
 }
 
-function updateInventoryUI() {
-  const el = $('inventoryDisplay');
-  if (!player.inventory.length) {
-    el.innerHTML = '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--mist);letter-spacing:1px">— empty —</span>';
-    return;
-  }
-  el.innerHTML = player.inventory.map(i => '<span class="inv-tag">' + i.toUpperCase() + '</span>').join('');
+function updateInventoryUI(){
+  const el=$('inventoryDisplay');
+  if(!player.inventory.length){el.innerHTML='<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--mist);letter-spacing:1px">— empty —</span>';return;}
+  el.innerHTML=player.inventory.map(i=>'<span class="inv-tag">'+i.toUpperCase()+'</span>').join('');
 }
 
-function getRepTier() {
-  for (let i = REP_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (player.respect >= REP_THRESHOLDS[i]) return i;
-  }
+function getRepTier(){
+  for(let i=REP_THRESHOLDS.length-1;i>=0;i--)if(player.respect>=REP_THRESHOLDS[i])return i;
   return 0;
 }
 
-// ═══════════════════════════════════════════════════════
-// MAP
-// ═══════════════════════════════════════════════════════
-const ZONE_BASE_COLORS = {
-  none:'#252219', player:'#2a2a0a',
-  serpents:'#162016', reds:'#201010', harbor:'#101020'
-};
-
-function renderMap() {
-  if (!districtOwners) return;
-  DISTRICTS.forEach(d => {
-    const owner = districtOwners[d.id];
-    const zone = $('zone-' + d.id);
-    if (!zone) return;
-    const fill = zone.querySelector('.zone-fill');
-    const isPlayer = player.turfOwned.includes(d.id);
-    const gc = isPlayer ? '#2a2a10' : (ZONE_BASE_COLORS[owner] || '#252219');
-    if (fill) fill.setAttribute('fill', gc);
-    if (fill) fill.setAttribute('stroke', isPlayer ? '#e8b830' : GANG_COLORS[owner] || '#252219');
-    if (fill) fill.setAttribute('stroke-width', isPlayer ? '2' : '1');
-
-    const sub = $('zone-sub-' + d.id);
-    const gang = GANGS.find(g => g.id === owner);
-    if (sub) {
-      if (isPlayer) { sub.textContent = 'YOUR TURF'; sub.setAttribute('fill','#e8b830'); }
-      else if (owner === 'none') { sub.textContent = 'neutral'; sub.setAttribute('fill','#5a5548'); }
-      else { sub.textContent = gang ? gang.name : ''; sub.setAttribute('fill', GANG_COLORS[owner] || '#5a5548'); }
-    }
-  });
-
-  // Move player marker
-  const d = DISTRICTS[player.currentDistrict];
-  const marker = $('player-marker');
-  const pulse = $('player-pulse');
-  if (marker) { marker.setAttribute('cx', d.x); marker.setAttribute('cy', d.y); }
-  if (pulse)  { pulse.setAttribute('cx', d.x); pulse.setAttribute('cy', d.y); }
-
-  $('current-district-label').textContent = d.name.toUpperCase();
-
-  // Legend
-  const legendEl = $('mapLegend');
-  const gangsSeen = new Set();
-  Object.values(districtOwners).forEach(g => gangsSeen.add(g));
-  const extras = [...gangsSeen].filter(g => g !== 'none').map(g => {
-    const gd = GANGS.find(x => x.id === g);
-    return gd ? `<div class="legend-item"><div class="legend-dot" style="background:${gd.color}"></div>${gd.name.toUpperCase()}</div>` : '';
-  }).join('');
-  legendEl.innerHTML = `<div class="legend-item"><div class="legend-dot" style="background:var(--gold-light)"></div>YOU</div><div class="legend-item"><div class="legend-dot" style="background:#5a5548"></div>NEUTRAL</div><div class="legend-item"><div class="legend-dot" style="background:#e8b830;opacity:.5"></div>YOUR TURF</div>${extras}`;
+function updateCasinoStats(){
+  if(!player)return;
+  $('casino-won').textContent='$'+(player.casinoWon||0).toLocaleString();
+  $('casino-lost').textContent='$'+(player.casinoLost||0).toLocaleString();
+  const net=(player.casinoWon||0)-(player.casinoLost||0);
+  $('casino-net').textContent=(net>=0?'+':'')+'$'+net.toLocaleString();
+  $('casino-net').style.color=net>=0?'var(--green-light)':'var(--blood)';
+  $('casino-bigwin').textContent='$'+(player.casinoBigWin||0).toLocaleString();
+  $('casino-streak').textContent=player.casinoStreak||0;
 }
 
-function selectDistrict(id) {
-  SFX.click();
-  selectedDistrict = id;
-  const d = DISTRICTS[id];
-  const owner = districtOwners[id];
-  const isPlayer = player.turfOwned.includes(id);
-  const isCurrent = player.currentDistrict === id;
-  const gang = GANGS.find(g => g.id === owner);
-
-  $('di-name').textContent = d.name.toUpperCase();
-
-  let gangLabel = '';
-  if (isPlayer) gangLabel = '<span style="color:var(--gold-light)">YOUR TERRITORY</span>';
-  else if (owner === 'none') gangLabel = '<span style="color:var(--mist)">Unclaimed — no gang presence</span>';
-  else gangLabel = '<span style="color:' + GANG_COLORS[owner] + '">' + gang.name.toUpperCase() + '</span> <span style="color:var(--mist)">· Power: ' + gangPowers[owner] + '</span>';
-
-  $('di-gang').innerHTML = gangLabel;
-
-  let btns = '';
-  if (!isCurrent) btns += '<button class="di-btn travel" onclick="travelTo(' + id + ')">✈ TRAVEL</button>';
-  if (isCurrent && !isPlayer && owner === 'none') btns += '<button class="di-btn defend" onclick="claimDistrict(' + id + ')">⚑ CLAIM</button>';
-  if (isCurrent && !isPlayer && owner !== 'none' && owner !== 'player') btns += '<button class="di-btn attack" onclick="attackDistrict(' + id + ')">⚔ ATTACK</button>';
-  if (isCurrent && isPlayer) btns += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--gold);letter-spacing:1px">✓ CONTROLLED — +$' + (20 * (getRepTier()+1)) + '/day</span>';
-
-  $('di-actions').innerHTML = btns || '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--mist)">Travel here first</span>';
-}
-
-function travelTo(id) {
-  if (!player) return;
-  if (player.cooldown > 0) return showToast('Wait ' + player.cooldown + 's', 'warn');
-  SFX.travel();
-  player.currentDistrict = id;
-  player.cooldown = 15;
-  cooldownMax = 15;
-  advanceTime(2);
-  addLog('Traveled to ' + DISTRICTS[id].name + '.', 'info');
-  renderAll();
-  selectDistrict(id);
-  showToast('Arrived: ' + DISTRICTS[id].name, 'info');
-}
-
-function claimDistrict(id) {
-  if (player.cooldown > 0) return showToast('Wait ' + player.cooldown + 's', 'warn');
-  SFX.success();
-  districtOwners[id] = 'player';
-  player.turfOwned.push(id);
-  player.cooldown = 30;
-  cooldownMax = 30;
-  player.respect += 5;
-  advanceTime(1);
-  addLog('Claimed ' + DISTRICTS[id].name + '. New territory established.', 'win');
-  showToast(DISTRICTS[id].name + ' claimed!', 'win');
-  checkMissions();
-  renderAll();
-  selectDistrict(id);
-}
-
-function attackDistrict(id) {
-  if (player.cooldown > 0) return showToast('Wait ' + player.cooldown + 's', 'warn');
-  if (player.health < 20) return showToast('Too wounded to fight', 'warn');
-  const owner = districtOwners[id];
-  const gang = GANGS.find(g => g.id === owner);
-  openModal(
-    'Attack ' + DISTRICTS[id].name + '?',
-    'You\'re about to go to war with ' + gang.name + ' (Power: ' + gangPowers[owner] + '). This will cost health. Make sure you\'re ready.',
-    () => executeAttack(id)
-  );
-}
-
-function executeAttack(id) {
-  SFX.attack();
-  const owner = districtOwners[id];
-  const gang = GANGS.find(g => g.id === owner);
-  let power = gangPowers[owner];
-  let playerStrength = 30 + (player.level * 8) + (player.inventory.includes('weapon') ? 20 : 0);
-  player.cooldown = 60;
-  cooldownMax = 60;
-  advanceTime(3);
-
-  const roll = rand(1, 100);
-  const winChance = Math.min(85, Math.max(15, Math.round(playerStrength / (playerStrength + power) * 100)));
-
-  if (roll <= winChance) {
-    gangPowers[owner] = Math.max(0, power - rand(10, 20));
-    districtOwners[id] = 'player';
-    player.turfOwned.push(id);
-    player.takedowns++;
-    player.respect += 10;
-    player.xp += 30;
-    const dmg = player.inventory.includes('vest') ? rand(5,15) : rand(10,30);
-    player.health = Math.max(1, player.health - dmg);
-    SFX.success();
-    addLog('VICTORY — ' + DISTRICTS[id].name + ' seized from ' + gang.name + '. -' + dmg + ' HP.', 'win');
-    showToast('District captured!', 'win');
-    levelUp();
-    checkMissions();
-  } else {
-    const dmg = player.inventory.includes('vest') ? rand(15,30) : rand(25,50);
-    player.health = Math.max(0, player.health - dmg);
-    player.wanted = Math.min(5, player.wanted + 1);
-    SFX.fail();
-    addLog('DEFEAT — Driven back from ' + DISTRICTS[id].name + '. -' + dmg + ' HP.', 'loss');
-    showToast('Attack failed — -' + dmg + ' HP', 'loss');
-    if (player.health === 0) playerDied();
-  }
-
-  renderAll();
-  selectDistrict(id);
-}
-
-// Gang income each day
-function collectTurfIncome() {
-  if (!player || !player.turfOwned.length) return;
-  const income = player.turfOwned.length * 20 * (getRepTier() + 1);
-  player.cash += income;
-  addLog('Turf income: +$' + income + ' (' + player.turfOwned.length + ' districts).', 'win');
-  SFX.cash();
-}
-
-// Gang counter-attack over time
-function gangAggression() {
-  if (!player || !player.turfOwned.length) return;
-  player.turfOwned.forEach(dId => {
-    const neighbors = getNeighborGang(dId);
-    if (!neighbors) return;
-    const gang = GANGS.find(g => g.id === neighbors);
-    if (!gang || gangPowers[gang.id] < 5) return;
-    if (rand(1,100) > 25) return;
-    // Gang retakes
-    const idx = player.turfOwned.indexOf(dId);
-    player.turfOwned.splice(idx, 1);
-    districtOwners[dId] = gang.id;
-    const dmg = rand(5,15);
-    player.health = Math.max(0, player.health - dmg);
-    addLog('⚠ ' + gang.name + ' retook ' + DISTRICTS[dId].name + '! -' + dmg + ' HP.', 'loss');
-    showToast(gang.name + ' counter-attacked!', 'loss');
-    SFX.bust();
-  });
-}
-
-function getNeighborGang(districtId) {
-  const neighbors = { 0:[1,2,3,4], 1:[0,5,7], 2:[0,5,6], 3:[0,7,8], 4:[0,6,8], 5:[1,2], 6:[2,4], 7:[1,3], 8:[3,4] };
-  const nbs = neighbors[districtId] || [];
-  for (const nb of nbs) {
-    const owner = districtOwners[nb];
-    if (owner && owner !== 'none' && owner !== 'player') return owner;
-  }
-  return null;
-}
-
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // CRIMES
-// ═══════════════════════════════════════════════════════
-function crime(type) {
-  if (!player) return;
-  if (player.cooldown > 0) return showToast('Wait ' + player.cooldown + 's', 'warn');
-  if (player.energy < 10) return showToast('Too tired to work', 'warn');
+// ═══════════════════════════════════════════════════════════════
+function crime(type){
+  if(!player)return showToast('Create a character first','warn');
+  if(player.cooldown>0)return showToast('Wait '+player.cooldown+'s','warn');
+  if(player.energy<10)return showToast('Too tired','warn');
 
-  const types = {
-    mugging: { success:80, min:20, max:60, xp:5, cd:30, label:'Mugging' },
-    store:   { success:55, min:80, max:180, xp:12, cd:50, label:'Store robbery' },
-    car:     { success:35, min:200, max:500, xp:25, cd:80, label:'Car theft' },
+  // Gate checks
+  if(type==='drugs'&&!player.inventory.includes('drugs-supply'))return showToast('Need Drug Supply from market','warn');
+  if(type==='heist'){
+    if(!player.inventory.includes('explosives'))return showToast('Need Explosives from market','warn');
+    if(player.level<5)return showToast('Need Level 5 for heists','warn');
+  }
+
+  const CRIME_TABLE={
+    mugging:{success:80,min:20,max:60,xp:5,cd:25,label:'Mugging',heatGain:1},
+    store:{success:55,min:80,max:200,xp:12,cd:45,label:'Store Robbery',heatGain:1},
+    car:{success:40,min:0,max:0,xp:20,cd:70,label:'Vehicle Theft',heatGain:2,isCar:true},
+    drugs:{success:60,min:300,max:800,xp:18,cd:60,label:'Drug Run',heatGain:2},
+    hack:{success:65,min:150,max:400,xp:15,cd:50,label:'Cyber Fraud',heatGain:1},
+    heist:{success:45,min:1000,max:5000,xp:60,cd:120,label:'Bank Heist',heatGain:3},
+    smuggle:{success:55,min:400,max:900,xp:22,cd:80,label:'Smuggling Run',heatGain:2}
   };
-  const t = types[type];
-  let bonus = 0;
-  if (type === 'store' && player.inventory.includes('lockpick')) bonus += 15;
-  if (player.inventory.includes('gloves')) bonus += 10;
+  const t=CRIME_TABLE[type];
+  let bonus=0;
+  if(type==='store'&&player.inventory.includes('lockpick'))bonus+=15;
+  if(player.inventory.includes('gloves'))bonus+=10;
+  if(type==='hack'&&player.inventory.includes('hacking-kit'))bonus+=25;
+  if(type==='heist'&&player.inventory.includes('drone'))bonus+=30;
+  if(player.turfOwned.includes(player.currentDistrict))bonus+=10;
+  if(player.activeCar)bonus+=player.activeCar.missionBonus||0;
 
-  // Turf bonus: operating in your district = +10%
-  if (player.turfOwned.includes(player.currentDistrict)) bonus += 10;
+  let lootBonus=player.inventory.includes('stash-bag')?1.25:1;
 
-  player.cooldown = t.cd;
-  cooldownMax = t.cd;
-  player.energy = Math.max(0, player.energy - 10);
+  player.cooldown=t.cd;cooldownMax=t.cd;
+  player.energy=Math.max(0,player.energy-10);
   advanceTime(2);
 
-  if (rand(1,100) <= t.success + bonus) {
-    const reward = rand(t.min, t.max);
-    player.cash += reward;
-    player.xp += t.xp;
-    player.respect++;
+  const roll=rand(1,100);
+  if(roll<=Math.min(92,t.success+bonus)){
+    // Success
+    if(t.isCar){
+      const car=randomStolenCar();
+      addCarToGarage(car,true);
+      addLog(t.label+' — stole a '+car.year+' '+car.brand+' '+car.model+'!','win');
+      showToast('Car acquired!','win');
+    } else {
+      const reward=Math.floor(rand(t.min,t.max)*lootBonus);
+      player.cash+=reward;player.xp+=t.xp;player.respect++;
+      player.crimeCount=(player.crimeCount||0)+1;
+      if(type==='heist')player.heistCount=(player.heistCount||0)+1;
+      SFX.success();setTimeout(SFX.cash,300);
+      addLog(t.label+' — success. +$'+reward.toLocaleString(),'win');showToast('+$'+reward.toLocaleString(),'win');
+      missionProgress('crimes',1);
+      if(type==='heist')missionProgress('heist',1);
+    }
+    // Heat
+    let heatAdd=t.heatGain;
+    if(player.inventory.includes('silencer'))heatAdd=Math.max(0,heatAdd-1);
+    player.wanted=Math.min(5,player.wanted+heatAdd);
     SFX.success();
-    setTimeout(SFX.cash, 300);
-    addLog(t.label + ' — success. +$' + reward, 'win');
-    showToast('+$' + reward, 'win');
-    missionProgress('crimes', 1);
   } else {
-    const dmg = rand(5, 20);
-    player.health = Math.max(0, player.health - dmg);
-    player.wanted = Math.min(5, player.wanted + 1);
+    const dmg=player.inventory.includes('vest')?rand(5,15):rand(10,30);
+    player.health=Math.max(0,player.health-dmg);
+    player.wanted=Math.min(5,player.wanted+t.heatGain);
     SFX.fail();
-    addLog(t.label + ' — failed. -' + dmg + ' HP, heat up.', 'loss');
-    showToast('Operation failed', 'loss');
-    if (player.health === 0) return playerDied();
+    addLog(t.label+' — failed. -'+dmg+' HP.','loss');showToast('Failed — -'+dmg+' HP','loss');
+    if(player.health<=0)return playerDied();
   }
-  levelUp();
-  policeCheck();
-  checkMissions();
-  renderAll();
+  levelUp();policeCheck();checkMissions();renderAll();
 }
 
-function rest() {
-  if (!player) return;
-  if (player.cooldown > 0) return showToast('Still busy for ' + player.cooldown + 's', 'warn');
-  player.cooldown = 20; cooldownMax = 20;
-  player.energy = Math.min(100, player.energy + 30);
-  player.health = Math.min(100, player.health + 20);
-  advanceTime(8);
-  addLog('Rested up. HP and energy restored.', 'info');
-  SFX.click();
-  renderAll();
+function randomStolenCar(){
+  const pool=CAR_DATABASE.filter(c=>c.rarity==='common'||c.rarity==='uncommon');
+  const base=pool[rand(0,pool.length-1)];
+  return {
+    ...base,
+    id:'car_'+Date.now()+'_'+rand(1000,9999),
+    condition:rand(40,85),
+    stolenPlates:true,
+    painted:false,
+    nickname:null,
+    vinCloned:false
+  };
 }
 
-function levelUp() {
-  while (player.xp >= player.level * 50) {
-    player.level++;
-    player.energy = 100;
-    player.health = 100;
+function rest(){
+  if(!player)return;
+  if(player.cooldown>0)return showToast('Still busy for '+player.cooldown+'s','warn');
+  player.cooldown=20;cooldownMax=20;
+  player.energy=Math.min(100,player.energy+30);
+  player.health=Math.min(100,player.health+20);
+  advanceTime(8);SFX.click();
+  addLog('Rested up.','info');renderAll();
+}
+
+function levelUp(){
+  while(player.xp>=player.level*50){
+    player.level++;player.energy=100;player.health=100;
     SFX.levelUp();
-    addLog('★ LEVEL UP — Rank ' + player.level + '. Full health restored.', 'win');
-    showToast('LEVEL ' + player.level + '!', 'win');
+    addLog('★ LEVEL UP — Rank '+player.level+'.','win');showToast('LEVEL '+player.level+'!','win');
     checkMissions();
   }
 }
 
-function policeCheck() {
-  if (!player.wanted) return;
-  if (rand(1,100) > player.wanted * 12) return;
-  const fine = rand(30, 120);
-  player.cash = Math.max(0, player.cash - fine);
-  player.health = Math.max(0, player.health - 10);
-  player.energy = Math.max(0, player.energy - 10);
-  player.wanted = Math.min(5, player.wanted + 1);
+function policeCheck(){
+  if(!player.wanted)return;
+  let bustChance=player.wanted*12;
+  if(player.inventory.includes('scanner'))bustChance*=0.6;
+  if(player.inventory.includes('burner-phone'))bustChance-=10;
+  if(player.activeCar)bustChance-=(player.activeCar.escapeBonus||0)*0.3;
+  if(rand(1,100)>bustChance)return;
+  const fine=rand(50,200);
+  player.cash=Math.max(0,player.cash-fine);
+  player.health=Math.max(0,player.health-15);
+  player.energy=Math.max(0,player.energy-10);
+  player.wanted=Math.min(5,player.wanted+1);
   SFX.bust();
-  if (player.inventory.includes('fakeid')) {
-    player.wanted = Math.max(0, player.wanted - 2);
-    addLog('Busted — showed fake ID. Fine: $' + fine + '.', 'warn');
+  if(player.inventory.includes('fakeid')){
+    player.wanted=Math.max(0,player.wanted-2);
+    addLog('Busted — showed fake ID. Fine: $'+fine+'.','warn');
   } else {
-    addLog('BUSTED! Fine: $' + fine + '. Heat rising.', 'loss');
+    addLog('BUSTED! Fine: $'+fine.toLocaleString()+'. Heat rising.','loss');
   }
-  showToast('Busted — $' + fine, 'loss');
-  if (player.health <= 0) playerDied();
+  if(player.inventory.includes('lawyer')){
+    player.wanted=0;
+    const idx=player.inventory.indexOf('lawyer');
+    player.inventory.splice(idx,1);
+    addLog('Lawyer called. All charges dropped.','warn');
+  }
+  showToast('Busted — $'+fine,'loss');
+  if(player.health<=0)playerDied();
 }
 
-function playerDied() {
+function playerDied(){
   SFX.fail();
-  openModal('YOU DIED', player.name + ' has been taken off the streets. The city doesn\'t care. Your run ends here — but legends never truly die. Start fresh?', () => {
-    player = null; districtOwners = {}; gangPowers = {}; missions = [];
-    ['stats-panel','map-panel','actions-panel','gang-panel','missions-panel','shop-panel','casino-panel'].forEach(id => { $(id).style.display = 'none'; });
-    $('start-screen').style.display = 'block';
-    $('log').innerHTML = '';
-    logCount = 0;
-    localStorage.removeItem('mafia_save');
-    addLog('A new story begins...', 'info');
+  openModal('YOU DIED',player.name+' has been taken off the streets. Your empire crumbles. Start fresh?',()=>{
+    player=null;districtOwners={};gangPowers={};missions=[];garage=[];properties=[];
+    ['stats-panel','actions-panel','log-panel'].forEach(id=>{$(id).style.display='none';});
+    $('start-screen').style.display='block';
+    $('log').innerHTML='';logCount=0;
+    localStorage.removeItem('mafia_v3_save');
+    addLog('A new story begins...','info');
   });
 }
 
-// ═══════════════════════════════════════════════════════
-// SHOP
-// ═══════════════════════════════════════════════════════
-const itemData = {
-  lockpick:{ cost:150, label:'Lockpick' },
-  gloves:  { cost:100, label:'Gloves' },
-  fakeid:  { cost:200, label:'Fake ID' },
-  weapon:  { cost:350, label:'Piece' },
-  vest:    { cost:300, label:'Vest' },
-  energy:  { cost:50,  label:'Energy Drink' },
-};
-
-function buyItem(item) {
-  if (!player) return;
-  const d = itemData[item];
-  if (player.cash < d.cost) return showToast('Not enough cash', 'warn');
-  player.cash -= d.cost;
-  SFX.cash();
-  if (item === 'energy') {
-    player.energy = Math.min(100, player.energy + 40);
-    addLog('Drank energy drink. +40 energy.', 'info');
-    showToast('+40 Energy', 'gold');
-  } else {
-    if (!player.inventory.includes(item)) player.inventory.push(item);
-    else { player.cash += d.cost; return showToast('Already have ' + d.label, 'warn'); }
-    addLog('Bought ' + d.label + ' for $' + d.cost + '.', 'info');
-    showToast(d.label + ' acquired', 'gold');
+// ═══════════════════════════════════════════════════════════════
+// MAP & TERRITORY
+// ═══════════════════════════════════════════════════════════════
+function renderMap(){
+  if(!districtOwners)return;
+  const ZONE_BASE={none:'#252219',player:'#2a2a10',serpents:'#162016',reds:'#201010',harbor:'#101020'};
+  DISTRICTS.forEach(d=>{
+    const owner=districtOwners[d.id];
+    const isPlayer=player&&player.turfOwned.includes(d.id);
+    const zone=$('zone-'+d.id);if(!zone)return;
+    const fill=zone.querySelector('.zone-fill');
+    const gc=isPlayer?'#2a2a10':(ZONE_BASE[owner]||'#252219');
+    if(fill){fill.setAttribute('fill',gc);fill.setAttribute('stroke',isPlayer?'#e8b830':(GANG_COLORS[owner]||'#252219'));fill.setAttribute('stroke-width',isPlayer?'2':'1');}
+    const sub=$('zone-sub-'+d.id);
+    if(sub){
+      if(isPlayer){sub.textContent='YOUR TURF';sub.setAttribute('fill','#e8b830');}
+      else if(owner==='none'){sub.textContent='neutral';sub.setAttribute('fill','#5a5548');}
+      else{const g=GANG_DEFS.find(x=>x.id===owner);sub.textContent=g?g.name:'';sub.setAttribute('fill',GANG_COLORS[owner]||'#5a5548');}
+    }
+  });
+  if(player){
+    const d=DISTRICTS[player.currentDistrict];
+    const m=$('player-marker'),p=$('player-pulse');
+    if(m){m.setAttribute('cx',d.x);m.setAttribute('cy',d.y);}
+    if(p){p.setAttribute('cx',d.x);p.setAttribute('cy',d.y);}
+    $('city-district-label').textContent=d.name.toUpperCase();
   }
-  renderAll();
+  // Legend
+  const seen=new Set(Object.values(districtOwners).filter(x=>x!=='none'));
+  const extras=[...seen].map(g=>{const gd=GANG_DEFS.find(x=>x.id===g);return gd?`<div class="legend-item"><div class="legend-dot" style="background:${gd.color}"></div>${gd.name.toUpperCase()}</div>`:''}).join('');
+  $('mapLegend').innerHTML=`<div class="legend-item"><div class="legend-dot" style="background:var(--gold-light)"></div>YOU</div><div class="legend-item"><div class="legend-dot" style="background:#5a5548"></div>NEUTRAL</div><div class="legend-item"><div class="legend-dot" style="background:#2a2a10;border:1px solid var(--gold)"></div>YOUR TURF</div>${extras}`;
 }
 
-// ═══════════════════════════════════════════════════════
-// CASINO
-// ═══════════════════════════════════════════════════════
-function casino(choice) {
-  if (!player) return;
-  if (player.cooldown > 0) return showToast('Wait ' + player.cooldown + 's', 'warn');
-  const bet = parseInt($('betAmount').value);
-  if (!bet || bet < 10) return showToast('Min bet is $10', 'warn');
-  if (player.cash < bet) return showToast('Not enough cash', 'warn');
-  player.cash -= bet;
-  player.cooldown = 8; cooldownMax = 8;
-  const r = rand(1,100);
-  let win = false, payout = 0;
-  if ((choice==='red'||choice==='black') && r<=48) { win=true; payout=bet*2; }
-  if (choice==='jackpot' && r<=5) { win=true; payout=bet*10; }
-  if (win) {
-    player.cash += payout;
-    player.respect++;
-    SFX.win();
-    addLog('Casino — ' + choice.toUpperCase() + ' wins. +$' + payout, 'win');
-    showToast('+$' + payout + ' 🎰', 'win');
-    missionProgress('casinowin', payout);
-  } else {
-    SFX.fail();
-    addLog('Casino — ' + choice.toUpperCase() + ' lost. -$' + bet, 'loss');
-    showToast('Lost $' + bet, 'loss');
-  }
-  advanceTime(1);
-  renderAll();
-}
-
-// ═══════════════════════════════════════════════════════
-// MISSIONS
-// ═══════════════════════════════════════════════════════
-function missionProgress(type, amount) {
-  missions.forEach(m => {
-    if (m.done || !m.active) return;
-    if (m.type === type) {
-      if (type === 'casinowin') m.progress = Math.max(m.progress, amount);
-      else m.progress = Math.min(m.goal, m.progress + amount);
-    }
-  });
-  checkMissions();
-}
-
-function checkMissions() {
-  if (!player) return;
-  missions.forEach(m => {
-    // Unlock checks
-    if (m.locked) {
-      if (m.req === null) m.locked = false;
-      else if (m.req && m.req.startsWith('level:') && player.level >= parseInt(m.req.split(':')[1])) m.locked = false;
-      else if (m.req && m.req.startsWith('turf:') && player.turfOwned.length >= parseInt(m.req.split(':')[1])) m.locked = false;
-      else if (m.req && m.req.startsWith('rep:') && getRepTier() >= parseInt(m.req.split(':')[1])) m.locked = false;
-    }
-    // Auto-progress for level/turf/rep missions
-    if (!m.locked && !m.done) {
-      if (m.type === 'level') m.progress = player.level;
-      if (m.type === 'turf') m.progress = player.turfOwned.length;
-      if (m.type === 'rep') m.progress = getRepTier();
-    }
-    // Complete
-    if (!m.locked && !m.done && m.progress >= m.goal) {
-      m.done = true;
-      m.active = false;
-      player.cash += m.reward.cash;
-      player.xp += m.reward.xp;
-      player.respect += m.reward.respect;
-      SFX.mission();
-      addLog('✦ MISSION COMPLETE: ' + m.title + ' — +$' + m.reward.cash + ', +' + m.reward.respect + ' respect.', 'win');
-      showToast('Mission done: ' + m.title, 'win');
-      levelUp();
-    }
-  });
-  renderMissions();
-}
-
-function startMission(id) {
+function selectDistrict(id){
   SFX.click();
-  const m = missions.find(x => x.id === id);
-  if (!m || m.done || m.locked) return;
-  missions.forEach(x => x.active = false);
-  m.active = true;
-  addLog('Mission started: ' + m.title, 'info');
-  showToast('Mission: ' + m.title, 'info');
-  renderMissions();
+  selectedDistrict=id;
+  const d=DISTRICTS[id];
+  const owner=districtOwners[id];
+  const isPlayer=player&&player.turfOwned.includes(id);
+  const isCurrent=player&&player.currentDistrict===id;
+  const gang=GANG_DEFS.find(g=>g.id===owner);
+  $('di-name').textContent=d.name.toUpperCase();
+  let gl='';
+  if(isPlayer)gl='<span style="color:var(--gold-light)">YOUR TERRITORY</span>';
+  else if(owner==='none')gl='<span style="color:var(--mist)">Unclaimed — no gang presence</span>';
+  else gl='<span style="color:'+GANG_COLORS[owner]+'">'+gang.name.toUpperCase()+'</span> <span style="color:var(--mist)">· Power: '+gangPowers[owner]+'</span>';
+  $('di-gang').innerHTML=gl;
+  let btns='';
+  if(!player){$('di-actions').innerHTML='';return;}
+  if(!isCurrent)btns+='<button class="di-btn travel" onclick="travelTo('+id+')">✈ TRAVEL</button>';
+  if(isCurrent&&!isPlayer&&owner==='none')btns+='<button class="di-btn defend" onclick="claimDistrict('+id+')">⚑ CLAIM</button>';
+  if(isCurrent&&!isPlayer&&owner!=='none')btns+='<button class="di-btn attack" onclick="attackDistrict('+id+')">⚔ ATTACK ('+gangPowers[owner]+' PWR)</button>';
+  if(isCurrent&&isPlayer)btns+='<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--gold);letter-spacing:1px">✓ CONTROLLED</span>';
+  $('di-actions').innerHTML=btns||'<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--mist)">Travel here first</span>';
 }
 
-function renderMissions() {
-  const el = $('mission-list');
-  if (!el || !missions.length) return;
-  el.innerHTML = missions.map(m => {
-    if (m.locked) return `<div class="mission-card" style="opacity:.35;border-left-color:var(--mist)"><div class="mission-title" style="color:var(--mist)">${m.title}</div><div class="mission-desc" style="font-size:10px">${m.reqLabel || 'Locked'}</div></div>`;
-    const pct = m.goal > 0 ? Math.min(100, Math.round(m.progress / m.goal * 100)) : 0;
-    const btnLabel = m.done ? 'COMPLETE' : m.active ? 'ACTIVE' : 'START';
-    return `<div class="mission-card ${m.done ? 'done' : m.active ? 'active-m' : ''}">
-      <div class="mission-title">${m.title}</div>
-      <div class="mission-desc">${m.desc}</div>
-      <div class="mission-reward">Reward: $${m.reward.cash} · +${m.reward.xp} XP · +${m.reward.respect} Respect</div>
-      ${!m.done ? '<div class="mission-progress"><div class="mission-progress-fill" style="width:'+pct+'%"></div></div><div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--mist);margin-top:3px">'+m.progress+' / '+m.goal+'</div>' : ''}
-      <button class="mission-btn" style="margin-top:8px" onclick="startMission('${m.id}')" ${m.done||m.active?'disabled':''}>${btnLabel}</button>
-    </div>`;
-  }).join('');
+function travelTo(id){
+  if(!player)return;
+  if(player.cooldown>0)return showToast('Wait '+player.cooldown+'s','warn');
+  SFX.travel();
+  const escBonus=player.activeCar?(player.activeCar.escapeBonus||0)*0.1:0;
+  player.currentDistrict=id;
+  player.cooldown=Math.max(8,15-Math.floor(escBonus));cooldownMax=player.cooldown;
+  advanceTime(2);
+  addLog('Traveled to '+DISTRICTS[id].name+'.','info');
+  renderAll();selectDistrict(id);showToast('Arrived: '+DISTRICTS[id].name,'info');
 }
 
-// ═══════════════════════════════════════════════════════
-// GANG LIST
-// ═══════════════════════════════════════════════════════
-function renderGangList() {
-  const el = $('gang-list');
-  if (!el) return;
-  el.innerHTML = GANGS.filter(g => g.id !== 'none').map(g => {
-    const ownedDistricts = Object.entries(districtOwners).filter(([,v]) => v === g.id).length;
-    const pow = gangPowers[g.id] || 0;
-    const powColor = pow > 40 ? 'var(--blood)' : pow > 20 ? 'var(--gold)' : 'var(--green-light)';
-    return `<div class="gang-row">
-      <div class="gang-color" style="background:${g.color}"></div>
-      <div class="gang-name">${g.name}</div>
-      <div class="gang-turf">${ownedDistricts} district${ownedDistricts!==1?'s':''}</div>
-      <div class="gang-power" style="color:${powColor}">PWR ${pow}</div>
-    </div>`;
-  }).join('') + `<div class="gang-row">
-    <div class="gang-color" style="background:var(--gold-light)"></div>
-    <div class="gang-name" style="color:var(--gold-light)">${player ? player.name.toUpperCase() : 'YOU'}</div>
-    <div class="gang-turf">${player ? player.turfOwned.length : 0} district${player && player.turfOwned.length!==1?'s':''}</div>
-    <div class="gang-power" style="color:var(--gold-light)">LV ${player ? player.level : 1}</div>
+function claimDistrict(id){
+  if(!player)return;
+  if(player.cooldown>0)return showToast('Wait '+player.cooldown+'s','warn');
+  SFX.success();
+  districtOwners[id]='player';player.turfOwned.push(id);
+  player.cooldown=30;cooldownMax=30;player.respect+=5;advanceTime(1);
+  addLog('Claimed '+DISTRICTS[id].name+'.','win');showToast(DISTRICTS[id].name+' claimed!','win');
+  missionProgress('turf',1);checkMissions();renderAll();selectDistrict(id);
+}
+
+function attackDistrict(id){
+  if(!player)return;
+  if(player.cooldown>0)return showToast('Wait '+player.cooldown+'s','warn');
+  if(player.health<20)return showToast('Too wounded to fight','warn');
+  const gang=GANG_DEFS.find(g=>g.id===districtOwners[id]);
+  openModal('Attack '+DISTRICTS[id].name+'?','Going to war with '+gang.name+' (Power: '+gangPowers[gang.id]+'). This will cost health.',()=>executeAttack(id));
+}
+
+function executeAttack(id){
+  SFX.attack();
+  const owner=districtOwners[id];
+  const power=gangPowers[owner];
+  let str=30+(player.level*8)+(player.inventory.includes('weapon')?20:0)+(player.activeCar?(player.activeCar.missionBonus||0):0);
+  player.cooldown=60;cooldownMax=60;advanceTime(3);
+  const winChance=Math.min(85,Math.max(15,Math.round(str/(str+power)*100)));
+  if(rand(1,100)<=winChance){
+    gangPowers[owner]=Math.max(0,power-rand(10,20));
+    districtOwners[id]='player';player.turfOwned.push(id);
+    player.takedowns++;player.respect+=10;player.xp+=30;
+    const dmg=player.inventory.includes('vest')?rand(5,12):rand(10,25);
+    player.health=Math.max(1,player.health-dmg);
+    SFX.success();
+    addLog('VICTORY — '+DISTRICTS[id].name+' seized. -'+dmg+' HP.','win');showToast('District captured!','win');
+    missionProgress('turf',1);levelUp();checkMissions();
+  } else {
+    const dmg=player.inventory.includes('vest')?rand(15,25):rand(25,45);
+    player.health=Math.max(0,player.health-dmg);
+    player.wanted=Math.min(5,player.wanted+1);
+    SFX.fail();
+    addLog('DEFEAT — Driven back from '+DISTRICTS[id].name+'. -'+dmg+' HP.','loss');showToast('Attack failed','loss');
+    if(player.health<=0)return playerDied();
+  }
+  renderAll();selectDistrict(id);
+}
+
+function collectTurfIncome(){
+  if(!player||!player.turfOwned.length)return;
+  const income=player.turfOwned.length*20*(getRepTier()+1);
+  player.cash+=income;
+  addLog('Turf income: +$'+income.toLocaleString()+'.','win');SFX.cash();
+}
+
+function collectPropertyIncome(){
+  if(!player||!properties.length)return;
+  const income=properties.reduce((s,pid)=>{const p=PROPERTY_DEFS.find(x=>x.id===pid);return s+(p?p.income:0);},0);
+  if(income>0){player.cash+=income;addLog('Property income: +$'+income.toLocaleString()+'.','win');}
+  // Drug lab produces supply
+  if(properties.includes('drug-lab')&&!player.inventory.includes('drugs-supply')){
+    player.inventory.push('drugs-supply');addLog('Drug lab produced a supply batch.','info');
+  }
+}
+
+function gangAggression(){
+  if(!player||!player.turfOwned.length)return;
+  [...player.turfOwned].forEach(dId=>{
+    const nbs=D_NEIGHBORS[dId]||[];
+    const neighborGang=nbs.map(n=>districtOwners[n]).find(g=>g&&g!=='none'&&g!=='player');
+    if(!neighborGang)return;
+    if(gangPowers[neighborGang]<5)return;
+    if(rand(1,100)>20)return;
+    const idx=player.turfOwned.indexOf(dId);
+    player.turfOwned.splice(idx,1);
+    districtOwners[dId]=neighborGang;
+    const gang=GANG_DEFS.find(g=>g.id===neighborGang);
+    const dmg=rand(5,15);player.health=Math.max(0,player.health-dmg);
+    addLog('⚠ '+gang.name+' retook '+DISTRICTS[dId].name+'! -'+dmg+' HP.','loss');
+    showToast(gang.name+' counter-attacked!','loss');SFX.bust();
+  });
+}
+
+function renderGangList(){
+  const el=$('gang-list');if(!el)return;
+  el.innerHTML=GANG_DEFS.filter(g=>g.id!=='none').map(g=>{
+    const owned=Object.entries(districtOwners).filter(([,v])=>v===g.id).length;
+    const pow=gangPowers[g.id]||0;
+    const pc=pow>40?'var(--blood)':pow>20?'var(--gold)':'var(--green-light)';
+    return `<div class="gang-row"><div class="gang-color" style="background:${g.color}"></div><div class="gang-name">${g.name}</div><div class="gang-turf">${owned} districts</div><div class="gang-power" style="color:${pc}">PWR ${pow}</div></div>`;
+  }).join('')+(player?`<div class="gang-row"><div class="gang-color" style="background:var(--gold-light)"></div><div class="gang-name" style="color:var(--gold-light)">${player.name.toUpperCase()}</div><div class="gang-turf">${player.turfOwned.length} districts</div><div class="gang-power" style="color:var(--gold-light)">LV ${player.level}</div></div>`:'');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VEHICLES
+// ═══════════════════════════════════════════════════════════════
+function addCarToGarage(car,stolen=false){
+  const cap=GARAGE_UPGRADES[garageLevel].slots;
+  if(garage.length>=cap){showToast('Garage full — upgrade or sell','warn');return false;}
+  garage.push(car);
+  missionProgress('cars',1);
+  SFX.success();
+  return true;
+}
+
+function garageTab(tab){
+  activeGarageTab=tab;
+  document.querySelectorAll('.garage-tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  ['owned','steal','auction','upgrade'].forEach(n=>$('garage-'+n).style.display='none');
+  renderGarageTab();
+}
+
+function renderGarageTab(){
+  const cap=GARAGE_UPGRADES[garageLevel];
+  $('garage-capacity-label').textContent=garage.length+'/'+cap.slots+' slots — '+cap.name;
+  if(activeGarageTab==='owned')renderGarageOwned();
+  else if(activeGarageTab==='steal')renderGarageSteal();
+  else if(activeGarageTab==='auction')renderGarageAuction();
+  else if(activeGarageTab==='upgrade-garage')renderGarageUpgrade();
+}
+
+function renderGarageOwned(){
+  const el=$('garage-owned');el.style.display='block';
+  if(!garage.length){el.innerHTML='<div class="empty-garage">YOUR GARAGE IS EMPTY<br><span style="font-size:9px">Steal cars or buy from auction</span></div>';return;}
+  el.innerHTML='<div class="g2">'+garage.map((c,i)=>carCardHTML(c,i)).join('')+'</div>';
+}
+
+function carCardHTML(car,idx){
+  const cls=CAR_CLASSES[car.cls]||{label:'UNKNOWN',color:'#5a5548'};
+  const rarityColors={common:'#5a5548',uncommon:'#5090cc',rare:'#c9951a',legendary:'#e03020'};
+  const isActive=player&&player.activeCar&&player.activeCar.id===car.id;
+  const repairCost=Math.floor((100-car.condition)/100*car.baseValue*0.2);
+  return `<div class="car-card${isActive?' selected-car':''}">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+      <div class="car-brand">${car.brand}</div>
+      ${car.stolenPlates?'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:var(--blood);border:1px solid var(--blood);padding:1px 4px;letter-spacing:1px">HOT PLATES</span>':''}
+      ${isActive?'<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:var(--gold);border:1px solid var(--gold);padding:1px 4px;letter-spacing:1px">ACTIVE</span>':''}
+    </div>
+    <div class="car-model">${car.year} ${car.model}${car.nickname?' "'+car.nickname+'"':''}</div>
+    <div class="car-class-badge" style="border-color:${cls.color};color:${cls.color}">${cls.label}</div>
+    <div class="car-stats">
+      <div class="car-stat"><span>SPEED</span><span>${car.speed}</span></div>
+      <div class="car-stat"><span>STORAGE</span><span>${car.storage}</span></div>
+      <div class="car-stat"><span>ESCAPE</span><span>+${car.escapeBonus}%</span></div>
+      <div class="car-stat"><span>RARITY</span><span style="color:${rarityColors[car.rarity]||'#5a5548'};text-transform:uppercase">${car.rarity}</span></div>
+    </div>
+    <div class="section-label" style="margin-top:7px">HEAT</div>
+    <div class="car-heat">${Array.from({length:5},(_,i)=>'<div class="heat-pip'+(i<car.heat?' on':'')+'"></div>').join('')}</div>
+    <div class="section-label" style="margin-top:6px">CONDITION</div>
+    <div class="car-condition-bar"><div class="car-condition-fill" style="width:${car.condition}%;background:${car.condition>60?'var(--green-light)':car.condition>30?'var(--gold)':'var(--blood)'}"></div></div>
+    <div class="car-value">$${Math.floor(car.baseValue*(car.condition/100)).toLocaleString()}</div>
+    <div class="car-actions">
+      ${!isActive?`<button class="car-action-btn drive" onclick="setActiveCar(${idx})">DRIVE</button>`:'<button class="car-action-btn" style="border-color:var(--mist);color:var(--mist)" onclick="setActiveCar(-1)">PARK</button>'}
+      <button class="car-action-btn repair" onclick="repairCar(${idx})" ${car.condition>=100?'disabled':''}>REPAIR ($${repairCost.toLocaleString()})</button>
+      ${car.stolenPlates?`<button class="car-action-btn plates" onclick="changePlates(${idx})">CHANGE PLATES ($500)</button>`:''}
+      <button class="car-action-btn sell" onclick="sellCar(${idx})">SELL $${Math.floor(car.baseValue*(car.condition/100)*(properties.includes('chop-shop')?1.5:1)).toLocaleString()}</button>
+      <button class="car-action-btn scrap" onclick="scrapCar(${idx})">SCRAP</button>
+    </div>
   </div>`;
 }
 
-// ═══════════════════════════════════════════════════════
-// TIME
-// ═══════════════════════════════════════════════════════
-function advanceTime(hours) {
-  player.hour += hours;
-  while (player.hour >= 24) {
-    player.hour -= 24;
-    player.day++;
-    if (player.wanted > 0 && rand(1,100) <= 25) {
-      player.wanted--;
-      addLog('Heat cooled overnight.', 'info');
+function setActiveCar(idx){
+  if(idx===-1){player.activeCar=null;addLog('Vehicle parked.','info');}
+  else{player.activeCar={...garage[idx]};addLog('Now driving: '+garage[idx].brand+' '+garage[idx].model+'.','info');}
+  SFX.click();renderGarageTab();renderAll();
+}
+
+function repairCar(idx){
+  const car=garage[idx];
+  const cost=Math.floor((100-car.condition)/100*car.baseValue*0.2);
+  if(!player||player.cash<cost)return showToast('Not enough cash','warn');
+  player.cash-=cost;car.condition=100;
+  SFX.buy();addLog('Repaired '+car.brand+' '+car.model+' — $'+cost+'.','info');
+  showToast('Repaired!','gold');renderGarageTab();renderAll();
+}
+
+function changePlates(idx){
+  if(!player||player.cash<500)return showToast('Need $500','warn');
+  player.cash-=500;garage[idx].stolenPlates=false;garage[idx].heat=Math.max(0,garage[idx].heat-2);
+  SFX.buy();addLog('Plates changed on '+garage[idx].brand+'.','info');
+  showToast('Plates changed — heat reduced','gold');renderGarageTab();renderAll();
+}
+
+function sellCar(idx){
+  const car=garage[idx];
+  const chopBonus=properties.includes('chop-shop')?1.5:1;
+  const val=Math.floor(car.baseValue*(car.condition/100)*chopBonus);
+  openModal('Sell '+car.brand+' '+car.model+'?','You will receive $'+val.toLocaleString()+'.'+( chopBonus>1?' (Chop shop bonus applied!)':''),()=>{
+    player.cash+=val;
+    if(player.activeCar&&player.activeCar.id===car.id)player.activeCar=null;
+    garage.splice(idx,1);
+    SFX.cash();addLog('Sold '+car.brand+' '+car.model+' for $'+val.toLocaleString()+'.','win');
+    showToast('+$'+val.toLocaleString(),'win');renderGarageTab();renderAll();
+  });
+}
+
+function scrapCar(idx){
+  const car=garage[idx];const val=Math.floor(car.baseValue*0.05);
+  openModal('Scrap '+car.brand+' '+car.model+'?','You will get $'+val+' in parts.', ()=>{
+    player.cash+=val;
+    if(player.activeCar&&player.activeCar.id===car.id)player.activeCar=null;
+    garage.splice(idx,1);
+    addLog('Scrapped '+car.brand+'.','info');renderGarageTab();renderAll();
+  });
+}
+
+function renderGarageSteal(){
+  const el=$('garage-steal');el.style.display='block';
+  if(!player){el.innerHTML='<div class="empty-garage">Create a character first</div>';return;}
+  const pool=CAR_DATABASE.filter(c=>{
+    if(player.level>=5)return true;
+    if(player.level>=3)return c.rarity!=='legendary';
+    return c.rarity==='common'||c.rarity==='uncommon';
+  });
+  el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--mist);margin-bottom:12px;letter-spacing:1px">VEHICLES SPOTTED IN THE CITY — attempt a theft</div><div class="g2">'+pool.slice(0,8).map(c=>{
+    const cls=CAR_CLASSES[c.cls]||{label:'?',color:'#5a5548'};
+    const successChance=Math.max(20,55-(c.baseValue/10000));
+    return `<div class="car-card">
+      <div class="car-brand">${c.brand}</div>
+      <div class="car-model">${c.year} ${c.model}</div>
+      <div class="car-class-badge" style="border-color:${cls.color};color:${cls.color}">${cls.label}</div>
+      <div class="car-stats">
+        <div class="car-stat"><span>VALUE</span><span>$${c.baseValue.toLocaleString()}</span></div>
+        <div class="car-stat"><span>CHANCE</span><span>${Math.floor(successChance)}%</span></div>
+      </div>
+      <div class="car-actions"><button class="car-action-btn drive" onclick="stealSpecificCar('${c.brand}','${c.model}',${c.baseValue},${successChance},'${c.cls}','${c.rarity}',${c.speed},${c.storage},${c.heat},${c.escapeBonus},${c.missionBonus},${c.year})">ATTEMPT THEFT</button></div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+function stealSpecificCar(brand,model,baseValue,chance,cls,rarity,speed,storage,heat,escapeBonus,missionBonus,year){
+  if(!player)return;
+  if(player.cooldown>0)return showToast('Wait '+player.cooldown+'s','warn');
+  if(player.energy<15)return showToast('Too tired','warn');
+  let c=chance;
+  if(player.inventory.includes('gloves'))c+=10;
+  player.cooldown=50;cooldownMax=50;player.energy=Math.max(0,player.energy-15);advanceTime(2);
+  if(rand(1,100)<=c){
+    const car={brand,model,year,cls,rarity,baseValue,speed,storage,heat,escapeBonus,missionBonus,id:'car_'+Date.now(),condition:rand(50,90),stolenPlates:true,painted:false,nickname:null,vinCloned:false};
+    addCarToGarage(car,true);
+    player.wanted=Math.min(5,player.wanted+2);
+    addLog('Stole '+year+' '+brand+' '+model+'!','win');showToast('Car stolen!','win');SFX.success();
+    missionProgress('cars',1);
+  } else {
+    const dmg=rand(5,20);player.health=Math.max(0,player.health-dmg);
+    player.wanted=Math.min(5,player.wanted+2);
+    addLog('Failed to steal '+brand+' '+model+'. -'+dmg+' HP.','loss');showToast('Theft failed','loss');SFX.fail();
+    if(player.health<=0)return playerDied();
+  }
+  checkMissions();renderAll();renderGarageTab();
+}
+
+function renderGarageAuction(){
+  const el=$('garage-auction');el.style.display='block';
+  const items=CAR_DATABASE.filter(c=>c.rarity==='rare'||c.rarity==='legendary').map(c=>({
+    ...c,auctionPrice:Math.floor(c.baseValue*(0.8+Math.random()*0.4)),id:'auc_'+c.brand+'_'+c.model
+  }));
+  el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--mist);margin-bottom:12px;letter-spacing:1px">LIVE AUCTION — rare and legendary vehicles</div>'+
+  items.map(c=>{
+    const cls=CAR_CLASSES[c.cls]||{label:'?',color:'#5a5548'};
+    return `<div class="auction-item">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><div class="car-brand">${c.brand} ${c.model}</div><span class="auction-badge">${c.rarity.toUpperCase()}</span></div>
+        <div class="car-model">${c.year} · <span class="car-class-badge" style="border-color:${cls.color};color:${cls.color}">${cls.label}</span></div>
+        <div class="car-stats" style="margin-top:5px"><div class="car-stat"><span>SPEED</span><span>${c.speed}</span></div><div class="car-stat"><span>ESCAPE</span><span>+${c.escapeBonus}%</span></div></div>
+      </div>
+      <div style="text-align:right">
+        <div class="car-value">$${c.auctionPrice.toLocaleString()}</div>
+        <button class="car-action-btn sell" style="margin-top:6px" onclick="buyAuctionCar('${c.brand}','${c.model}',${c.auctionPrice},'${c.cls}','${c.rarity}',${c.speed},${c.storage},${c.heat},${c.escapeBonus},${c.missionBonus},${c.year},${c.baseValue})">BID &amp; BUY</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buyAuctionCar(brand,model,price,cls,rarity,speed,storage,heat,escapeBonus,missionBonus,year,baseValue){
+  if(!player||player.cash<price)return showToast('Not enough cash','warn');
+  openModal('Buy at auction?',brand+' '+model+' for $'+price.toLocaleString(),()=>{
+    player.cash-=price;
+    const car={brand,model,year,cls,rarity,baseValue,speed,storage,heat,escapeBonus,missionBonus,id:'car_'+Date.now(),condition:100,stolenPlates:false,painted:false,nickname:null,vinCloned:false};
+    if(!addCarToGarage(car,false))player.cash+=price;
+    else{SFX.buy();addLog('Bought '+brand+' '+model+' at auction for $'+price.toLocaleString()+'.','win');showToast(brand+' acquired!','win');missionProgress('cars',1);}
+    checkMissions();renderAll();renderGarageTab();
+  });
+}
+
+function renderGarageUpgrade(){
+  const el=$('garage-upgrade');el.style.display='block';
+  el.innerHTML=GARAGE_UPGRADES.map((g,i)=>`<div class="property-card" style="${i===garageLevel?'border-color:var(--gold)':''}">
+    <div class="property-icon" style="font-size:20px">🏗</div>
+    <div class="property-info">
+      <div class="property-name">${g.name} ${i===garageLevel?'<span style="color:var(--gold);font-size:10px">✓ CURRENT</span>':''}</div>
+      <div class="property-desc">${g.label} · ${g.slots} vehicle slots</div>
+      <div class="property-cost">${g.cost===0?'FREE':('$'+g.cost.toLocaleString())}</div>
+      ${i>garageLevel?`<button class="property-btn buy" style="margin-top:7px" onclick="upgradeGarage(${i})">UPGRADE</button>`:''}
+    </div>
+  </div>`).join('');
+}
+
+function upgradeGarage(idx){
+  const g=GARAGE_UPGRADES[idx];
+  if(!player||player.cash<g.cost)return showToast('Need $'+g.cost.toLocaleString(),'warn');
+  openModal('Upgrade to '+g.name+'?','Cost: $'+g.cost.toLocaleString()+'. Gives you '+g.slots+' vehicle slots.',()=>{
+    player.cash-=g.cost;garageLevel=idx;
+    SFX.buy();addLog('Upgraded to '+g.name+'.','win');showToast(g.name+' unlocked!','win');
+    renderAll();renderGarageTab();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REAL ESTATE
+// ═══════════════════════════════════════════════════════════════
+function renderProperties(){
+  const el=$('property-list');if(!el)return;
+  $('prop-count-label').textContent=properties.length+' properties owned';
+  el.innerHTML=PROPERTY_DEFS.map(p=>{
+    const owned=properties.includes(p.id);
+    const repReq=p.id==='casino-front'||p.id==='port-dock'?2:p.id==='mansion'||p.id==='bunker'?1:0;
+    const canAfford=player&&player.cash>=p.cost;
+    const hasRep=player&&getRepTier()>=repReq;
+    const locked=!hasRep;
+    return `<div class="property-card" style="${owned?'border-color:var(--green);':''}${locked&&!owned?'opacity:.5':''}">
+      <div class="property-icon">${p.icon}</div>
+      <div class="property-info">
+        <div class="property-name">${p.name} <span class="income-badge">+$${p.income.toLocaleString()}/day</span></div>
+        <div class="property-location">📍 ${p.location}</div>
+        <div class="property-desc">${p.desc}</div>
+        <div class="property-stats">
+          <div>Storage: <span>${p.storage}</span></div>
+          <div>Crew: <span>${p.crewSlots}</span></div>
+          <div>Bonus: <span>${p.bonus}</span></div>
+        </div>
+        ${locked&&!owned?`<div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--blood);margin-bottom:5px">Requires ${REP_TIERS[repReq]} rank</div>`:''}
+        <div class="property-cost">${owned?'OWNED':'$'+p.cost.toLocaleString()}</div>
+        <button class="property-btn ${owned?'owned':'buy'}" style="margin-top:6px" onclick="${owned?'':'buyProperty(\''+p.id+'\')' }" ${owned||locked?'disabled':''}>
+          ${owned?'✓ OWNED':'BUY'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buyProperty(id){
+  const p=PROPERTY_DEFS.find(x=>x.id===id);
+  if(!player||!p)return;
+  if(player.cash<p.cost)return showToast('Need $'+p.cost.toLocaleString(),'warn');
+  openModal('Buy '+p.name+'?',p.desc+'\n\nCost: $'+p.cost.toLocaleString()+'\nIncome: $'+p.income.toLocaleString()+'/day',()=>{
+    player.cash-=p.cost;properties.push(p.id);
+    SFX.buy();addLog('Purchased '+p.name+' in '+p.location+'.','win');showToast(p.name+' acquired!','win');
+    missionProgress('properties',1);checkMissions();renderAll();renderProperties();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHOP
+// ═══════════════════════════════════════════════════════════════
+function buyItem(item){
+  if(!player)return showToast('Create a character first','warn');
+  const d=ITEM_DATA[item];if(!d)return;
+  if(player.cash<d.cost)return showToast('Not enough cash — need $'+d.cost,'warn');
+  player.cash-=d.cost;SFX.buy();
+  // Instant-use items
+  if(item==='energy'){player.energy=Math.min(100,player.energy+40);showToast('+40 Energy','gold');}
+  else if(item==='medkit'){player.health=Math.min(100,player.health+50);showToast('+50 HP','win');}
+  else if(item==='lawyer'){player.wanted=0;showToast('All charges dropped','gold');}
+  else{
+    if(player.inventory.includes(item)){player.cash+=d.cost;return showToast('Already have '+d.label,'warn');}
+    player.inventory.push(item);showToast(d.label+' acquired','gold');
+  }
+  addLog('Bought '+d.label+' for $'+d.cost+'.','info');renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CASINO
+// ═══════════════════════════════════════════════════════════════
+function casino(choice){
+  if(!player)return showToast('Create a character first','warn');
+  if(player.cooldown>0)return showToast('Wait '+player.cooldown+'s','warn');
+  const bet=parseInt($('betAmount').value);
+  if(!bet||bet<10)return showToast('Min bet is $10','warn');
+  if(player.cash<bet)return showToast('Not enough cash','warn');
+  player.cash-=bet;player.cooldown=8;cooldownMax=8;
+  const r=rand(1,100);
+  let win=false,payout=0;
+  const ODDS={red:{chance:48,mult:2},black:{chance:48,mult:2},jackpot:{chance:5,mult:10},high:{chance:35,mult:3},sports:{chance:45,mult:2.2},slots:{chance:20,mult:5}};
+  const o=ODDS[choice]||ODDS.red;
+  let ch=o.chance;
+  if(properties.includes('casino-front'))ch=Math.min(ch+5,60);
+  if(r<=ch){win=true;payout=Math.floor(bet*o.mult*(properties.includes('casino-front')?2:1));}
+  if(win){
+    player.cash+=payout;player.respect++;
+    player.casinoWon=(player.casinoWon||0)+payout;
+    player.casinoStreak=(player.casinoStreak||0)+1;
+    player.casinoBigWin=Math.max(player.casinoBigWin||0,payout);
+    SFX.win();
+    addLog('Casino — '+choice.toUpperCase()+' wins. +$'+payout.toLocaleString(),'win');
+    showToast('+$'+payout.toLocaleString()+' 🎰','win');
+    missionProgress('casinowin',payout);
+  } else {
+    player.casinoLost=(player.casinoLost||0)+bet;
+    player.casinoStreak=0;
+    SFX.fail();
+    addLog('Casino — '+choice.toUpperCase()+' lost. -$'+bet,'loss');showToast('Lost $'+bet,'loss');
+  }
+  advanceTime(1);checkMissions();renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MISSIONS
+// ═══════════════════════════════════════════════════════════════
+function missionProgress(type,amount){
+  if(!missions)return;
+  missions.forEach(m=>{
+    if(m.done||!m.active)return;
+    if(m.type===type){
+      if(type==='casinowin')m.progress=Math.max(m.progress,amount);
+      else m.progress=Math.min(m.goal,m.progress+amount);
     }
+  });
+  checkMissions();
+}
+
+function checkMissions(){
+  if(!player||!missions)return;
+  missions.forEach(m=>{
+    if(!m.locked)return;
+    if(!m.req)return void(m.locked=false);
+    const[k,v]=m.req.split(':');
+    if(k==='level'&&player.level>=+v)m.locked=false;
+    else if(k==='turf'&&player.turfOwned.length>=+v)m.locked=false;
+    else if(k==='rep'&&getRepTier()>=+v)m.locked=false;
+  });
+  missions.forEach(m=>{
+    if(!m.locked&&!m.done){
+      if(m.type==='level')m.progress=player.level;
+      if(m.type==='turf')m.progress=player.turfOwned.length;
+      if(m.type==='rep')m.progress=getRepTier();
+      if(m.type==='cars')m.progress=garage.length;
+      if(m.type==='properties')m.progress=properties.length;
+    }
+    if(!m.locked&&!m.done&&m.progress>=m.goal){
+      m.done=true;m.active=false;
+      player.cash+=m.reward.cash;player.xp+=m.reward.xp;player.respect+=m.reward.respect;
+      SFX.mission();
+      addLog('✦ MISSION COMPLETE: '+m.title+' — +$'+m.reward.cash.toLocaleString()+', +'+m.reward.respect+' respect.','win');
+      showToast('Mission: '+m.title,'win');levelUp();
+    }
+  });
+  renderMissions();
+}
+
+function startMission(id){
+  SFX.click();const m=missions.find(x=>x.id===id);
+  if(!m||m.done||m.locked)return;
+  missions.forEach(x=>x.active=false);m.active=true;
+  addLog('Mission started: '+m.title,'info');showToast('Mission: '+m.title,'info');
+  renderMissions();
+}
+
+function renderMissions(){
+  const el=$('mission-list');if(!el||!missions.length)return;
+  el.innerHTML=missions.map(m=>{
+    if(m.locked)return`<div class="mission-card" style="opacity:.3;border-left-color:var(--mist)"><div class="mission-title" style="color:var(--mist)">${m.title}</div><div class="mission-desc" style="font-size:9px">${m.reqLabel||'Locked'}</div></div>`;
+    const pct=m.goal>0?Math.min(100,Math.round(m.progress/m.goal*100)):0;
+    return`<div class="mission-card ${m.done?'done':m.active?'active-m':''}">
+      <div class="mission-title">${m.title}</div>
+      <div class="mission-desc">${m.desc}</div>
+      <div class="mission-reward">$${m.reward.cash.toLocaleString()} · +${m.reward.xp} XP · +${m.reward.respect} Respect</div>
+      ${!m.done?'<div class="mission-progress"><div class="mission-progress-fill" style="width:'+pct+'%"></div></div><div style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--mist);margin-top:2px">'+m.progress+' / '+m.goal+'</div>':''}
+      <button class="mission-btn" style="margin-top:7px" onclick="startMission('${m.id}')" ${m.done||m.active?'disabled':''}>${m.done?'COMPLETE':m.active?'ACTIVE':'START'}</button>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHADOWNET — shared social feed
+// ═══════════════════════════════════════════════════════════════
+async function loadShadowFeed(){
+  $('feed-loading').style.display='block';
+  $('feed-list').innerHTML='';
+  if(player)$('post-compose-area').style.display='block';
+  try{
+    const result=await storage.list('feed_post_',true);
+    const posts=[];
+    for(const key of (result.keys||[])){
+      try{
+        const raw=await storage.get(key,true);
+        if(raw&&raw.value)posts.push(JSON.parse(raw.value));
+      }catch(e){}
+    }
+    posts.sort((a,b)=>b.ts-a.ts);
+    shadownetPosts=posts.slice(0,30);
+    renderFeed();
+  }catch(e){$('feed-loading').textContent='Could not load feed.';}
+  $('feed-loading').style.display='none';
+}
+
+function renderFeed(){
+  const el=$('feed-list');
+  if(!shadownetPosts.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--mist);text-align:center;padding:24px;letter-spacing:1px">No posts yet. Be the first to post.</div>';return;}
+  const colors=['#b52a1d','#4a8a50','#2a5a9a','#c9951a','#6a3a9a','#3a7a7a'];
+  el.innerHTML=shadownetPosts.map(p=>{
+    const color=colors[p.name.charCodeAt(0)%colors.length];
+    const isOwn=p.pid===playerId;
+    const ago=Math.floor((Date.now()-p.ts)/60000);
+    const agoStr=ago<1?'just now':ago<60?ago+'m ago':Math.floor(ago/60)+'h ago';
+    return`<div class="feed-post${isOwn?' own-post':''}">
+      <div class="post-header">
+        <div class="post-avatar" style="background:${color}22;border:1px solid ${color};color:${color}">${p.name[0].toUpperCase()}</div>
+        <div><div class="post-name">${p.name}</div><div class="post-rep">${p.rep||'STREET RAT'} · LV ${p.level||1}</div></div>
+        <div class="post-time">${agoStr}</div>
+      </div>
+      <div class="post-body">${p.body}</div>
+      <div class="post-tags">
+        ${p.cash?'<span class="post-tag">$'+Number(p.cash).toLocaleString()+'</span>':''}
+        ${p.turf?'<span class="post-tag">'+p.turf+' districts</span>':''}
+        ${p.car?'<span class="post-tag">'+p.car+'</span>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function submitPost(){
+  const body=$('post-input').value.trim();
+  if(!body)return showToast('Write something first','warn');
+  if(!player)return showToast('Create a character first','warn');
+  if(body.length>200)return showToast('Max 200 characters','warn');
+  const post={
+    pid:playerId,name:player.name,rep:REP_TIERS[getRepTier()],level:player.level,
+    cash:player.cash,turf:player.turfOwned.length,
+    car:player.activeCar?player.activeCar.brand+' '+player.activeCar.model:null,
+    body,ts:Date.now()
+  };
+  const key='feed_post_'+playerId+'_'+Date.now();
+  await storage.set(key,JSON.stringify(post),true);
+  $('post-input').value='';
+  SFX.click();showToast('Posted to ShadowNet','info');
+  await loadShadowFeed();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLAYER PROFILES
+// ═══════════════════════════════════════════════════════════════
+async function loadAllPlayers(){
+  $('player-list-loading').style.display='block';
+  $('player-list').innerHTML='';
+  try{
+    const result=await storage.list('profile_',true);
+    allPlayers=[];
+    for(const key of (result.keys||[])){
+      try{
+        const raw=await storage.get(key,true);
+        if(raw&&raw.value)allPlayers.push(JSON.parse(raw.value));
+      }catch(e){}
+    }
+    allPlayers.sort((a,b)=>b.cash-a.cash);
+    $('player-count-label').textContent=allPlayers.length+' players';
+    renderPlayers();
+  }catch(e){$('player-list-loading').textContent='Could not load player data.';}
+  $('player-list-loading').style.display='none';
+}
+
+function renderPlayers(){
+  const el=$('player-list');
+  if(!allPlayers.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--mist);text-align:center;padding:24px;letter-spacing:1px">No other players found yet.</div>';return;}
+  const colors=['#b52a1d','#4a8a50','#2a5a9a','#c9951a','#6a3a9a','#3a7a7a'];
+  const now=Date.now();
+  el.innerHTML=allPlayers.map((p,rank)=>{
+    const color=colors[p.name.charCodeAt(0)%colors.length];
+    const isOnline=(now-p.lastSeen)<300000;
+    const isMe=p.id===playerId;
+    return`<div class="player-profile-card" style="${isMe?'border-color:var(--gold)':''}">
+      <div class="profile-header">
+        <div class="profile-avatar" style="background:${color}22;border:2px solid ${color};color:${color}">${p.name[0].toUpperCase()}</div>
+        <div>
+          <div class="profile-name">#${rank+1} ${p.name} ${isMe?'<span style="color:var(--gold);font-size:9px">(YOU)</span>':''} <span class="online-badge${isOnline?' online':''}"></span></div>
+          <div class="profile-title">${p.rep||'STREET RAT'} · Level ${p.level}</div>
+        </div>
+      </div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="profile-stat-val">$${Number(p.cash||0).toLocaleString()}</div><div class="profile-stat-key">CASH</div></div>
+        <div class="profile-stat"><div class="profile-stat-val">${p.respect||0}</div><div class="profile-stat-key">RESPECT</div></div>
+        <div class="profile-stat"><div class="profile-stat-val">${p.turf||0}</div><div class="profile-stat-key">DISTRICTS</div></div>
+        <div class="profile-stat"><div class="profile-stat-val">${p.cars||0}</div><div class="profile-stat-key">CARS</div></div>
+        <div class="profile-stat"><div class="profile-stat-val">${p.properties||0}</div><div class="profile-stat-key">PROPS</div></div>
+        <div class="profile-stat"><div class="profile-stat-val">${p.takedowns||0}</div><div class="profile-stat-key">TAKEDOWNS</div></div>
+      </div>
+      ${p.activeCar&&p.activeCar!=='none'?`<div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--mist);margin-top:6px;letter-spacing:1px">🚗 DRIVING: <span style="color:var(--bone)">${p.activeCar}</span></div>`:''}
+      ${!isMe?`<div class="profile-actions">
+        <button class="profile-btn send-money" onclick="sendMoney('${p.id}','${p.name}')">SEND MONEY</button>
+        <button class="profile-btn challenge" onclick="challenge('${p.name}')">CHALLENGE</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function sendMoney(targetId,targetName){
+  if(!player)return showToast('Create a character first','warn');
+  openModal('Send Money to '+targetName,'How much do you want to send? (you have $'+player.cash.toLocaleString()+')',async()=>{
+    const amt=parseInt($('modal-input').value);
+    if(!amt||amt<=0||amt>player.cash)return showToast('Invalid amount','warn');
+    player.cash-=amt;
+    // Write a transfer record
+    const key='transfer_'+playerId+'_to_'+targetId+'_'+Date.now();
+    await storage.set(key,JSON.stringify({from:playerId,fromName:player.name,to:targetId,amount:amt,ts:Date.now()}),true);
+    // Post to feed
+    const post={pid:playerId,name:player.name,rep:REP_TIERS[getRepTier()],level:player.level,cash:player.cash,body:'Just wired $'+amt.toLocaleString()+' to '+targetName+'. Stay loyal.',ts:Date.now()};
+    await storage.set('feed_post_'+playerId+'_send_'+Date.now(),JSON.stringify(post),true);
+    SFX.cash();addLog('Sent $'+amt.toLocaleString()+' to '+targetName+'.','warn');
+    showToast('$'+amt.toLocaleString()+' sent','gold');renderAll();
+    await publishPlayerProfile();
+  },true,'Enter amount');
+}
+
+function challenge(name){
+  if(!player)return;
+  openModal('Challenge '+name+'?','Send a public challenge on ShadowNet. They will see your stats.',async()=>{
+    const post={pid:playerId,name:player.name,rep:REP_TIERS[getRepTier()],level:player.level,cash:player.cash,turf:player.turfOwned.length,body:'🔥 '+name+' — I am coming for your territory. Watch your back. — '+player.name,ts:Date.now()};
+    await storage.set('feed_post_challenge_'+Date.now(),JSON.stringify(post),true);
+    SFX.attack();showToast('Challenge posted to ShadowNet','info');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TIME
+// ═══════════════════════════════════════════════════════════════
+function advanceTime(hours){
+  if(!player)return;
+  player.hour+=hours;
+  while(player.hour>=24){
+    player.hour-=24;player.day++;
+    if(player.wanted>0&&rand(1,100)<=25){player.wanted--;addLog('Heat cooled overnight.','info');}
     collectTurfIncome();
+    collectPropertyIncome();
     gangAggression();
+    // Damage car condition over time
+    garage.forEach(c=>{if(c.condition>0)c.condition=Math.max(0,c.condition-rand(0,3));});
   }
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // HELPERS
-// ═══════════════════════════════════════════════════════
-function rand(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+// ═══════════════════════════════════════════════════════════════
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
 
-function addLog(text, type) {
-  const div = document.createElement('div');
-  div.className = 'log-entry' + (type ? ' log-' + type : '');
-  const h = player ? String(player.hour).padStart(2,'0') : '00';
-  const d = player ? player.day : 1;
-  div.innerHTML = '<span class="log-time">D' + d + '·' + h + ':00</span><span class="log-text">' + text + '</span>';
+function addLog(text,type){
+  const div=document.createElement('div');
+  div.className='log-entry'+(type?' log-'+type:'');
+  const h=player?String(player.hour).padStart(2,'0'):'00';
+  const d=player?player.day:1;
+  div.innerHTML='<span class="log-time">D'+d+'·'+h+':00</span><span class="log-text">'+text+'</span>';
   $('log').prepend(div);
-  if (++logCount > 80) {
-    const entries = $('log').querySelectorAll('.log-entry');
-    entries[entries.length - 1]?.remove();
-  }
+  if(++logCount>80){const entries=$('log').querySelectorAll('.log-entry');entries[entries.length-1]?.remove();}
 }
 
 let toastTimeout;
-function showToast(msg, type) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.className = 'show' + (type==='win' ? ' t-win' : type==='gold' ? ' t-gold' : type==='info' ? ' t-info' : '');
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => { t.className = ''; }, 2400);
+function showToast(msg,type){
+  const t=$('toast');t.textContent=msg;
+  t.className='show'+(type==='win'?' t-win':type==='gold'?' t-gold':type==='info'?' t-info':type==='purple'?' t-purple':'');
+  clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>{t.className='';},2400);
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // MODAL
-// ═══════════════════════════════════════════════════════
-let modalCallback = null;
-function openModal(title, body, cb) {
-  $('modal-title').textContent = title;
-  $('modal-body').textContent = body;
-  modalCallback = cb;
-  $('modal-overlay').classList.add('open');
+// ═══════════════════════════════════════════════════════════════
+let modalCb=null;
+function openModal(title,body,cb,showInput=false,placeholder=''){
+  $('modal-title').textContent=title;$('modal-body').textContent=body;
+  $('modal-input-wrap').style.display=showInput?'block':'none';
+  if(showInput){$('modal-input').value='';$('modal-input').placeholder=placeholder;}
+  modalCb=cb;$('modal-overlay').classList.add('open');
 }
-function closeModal() { $('modal-overlay').classList.remove('open'); modalCallback = null; }
-$('modal-confirm').onclick = () => { closeModal(); if (modalCallback) modalCallback(); };
-
-// startup
-addLog('Welcome to the city. Build your empire.', 'info');
+function closeModal(){$('modal-overlay').classList.remove('open');modalCb=null;}
+$('modal-confirm').onclick=()=>{closeModal();if(modalCb)modalCb();};
