@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAFIA RPG</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-title">MAFIA</div>
+  <div id="hud-center">— — —</div>
+  <div id="hud-right">
+    <span id="hud-rep">STREET RAT</span>
+    <span id="hud-cash">$—</span>
+    <span id="hud-wanted">☆☆☆☆☆</span>
+    <button class="hud-save-btn" onclick="saveGame()">SAVE</button>
+    <button class="hud-save-btn" onclick="loadGame()">LOAD</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div class="modal-title" id="modal-title">Confirm</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-btns">
+      <button class="modal-btn confirm" id="modal-confirm">Confirm</button>
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <div class="hero">
+    <div class="hero-title">M<span class="red">A</span>FI<span class="red">A</span><br>RPG</div>
+    <div class="hero-sub">▪ crime · territory · empire ▪</div>
+  </div>
+
+  <!-- START -->
+  <div class="panel" id="start-screen">
+    <div class="panel-title">Enter The Family</div>
+    <input class="name-input" id="playerName" type="text" placeholder="What do they call you?">
+    <button class="btn-start" onclick="createPlayer()">JOIN THE STREETS</button>
+    <button class="btn-load" onclick="loadGame()" id="load-btn" style="display:none">▶ CONTINUE SAVED GAME</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="panel" id="stats-panel" style="display:none">
+    <div class="panel-title">
+      <div class="level-badge" id="levelBadge">1</div>
+      <span id="playerNameDisplay">—</span>
+      <span class="rep-badge" id="repBadge">STREET RAT</span>
+    </div>
+    <div class="stat-cards">
+      <div class="stat-card"><div class="stat-card-val" id="sc-cash">$100</div><div class="stat-card-key">CASH</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="sc-respect">0</div><div class="stat-card-key">RESPECT</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="sc-turf">0</div><div class="stat-card-key">DISTRICTS</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="sc-kills">0</div><div class="stat-card-key">TAKEDOWNS</div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label"><span>HEALTH</span><span id="val-health">100</span></div>
+      <div class="stat-bar"><div class="stat-fill fill-health" id="bar-health" style="width:100%"></div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label"><span>ENERGY</span><span id="val-energy">100</span></div>
+      <div class="stat-bar"><div class="stat-fill fill-energy" id="bar-energy" style="width:100%"></div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label"><span>XP TO LEVEL</span><span id="val-xp">0 / 50</span></div>
+      <div class="stat-bar"><div class="stat-fill fill-xp" id="bar-xp" style="width:0%"></div></div>
+    </div>
+    <div class="section-label" style="margin-top:14px">REPUTATION</div>
+    <div class="rep-track" id="repTrack"></div>
+    <div class="rep-tier-labels"><span>STREET RAT</span><span>ASSOCIATE</span><span>SOLDIER</span><span>CAPO</span><span>BOSS</span></div>
+    <div class="section-label" style="margin-top:14px">HEAT LEVEL</div>
+    <div class="wanted-stars" id="wantedStars">
+      <div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div><div class="star"></div>
+    </div>
+    <div class="cooldown-bar"><div class="cooldown-fill" id="cooldownFill" style="width:0%"></div></div>
+    <div id="cooldownText" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mist);margin-top:4px;letter-spacing:1px">READY</div>
+    <div style="margin-top:14px">
+      <div class="section-label">INVENTORY</div>
+      <div id="inventoryDisplay"></div>
+    </div>
+  </div>
+
+  <!-- CITY MAP -->
+  <div class="panel" id="map-panel" style="display:none">
+    <div class="panel-title">City Map — <span id="current-district-label" style="color:var(--gold-light);font-size:14px;letter-spacing:2px">DOWNTOWN</span></div>
+    <div id="map-wrap">
+      <svg id="city-svg" viewBox="0 0 600 380" xmlns="http://www.w3.org/2000/svg">
+        <!-- Road grid background -->
+        <rect width="600" height="380" fill="#0e0c0a"/>
+        <line x1="0" y1="130" x2="600" y2="130" stroke="#1a1714" stroke-width="8"/>
+        <line x1="0" y1="250" x2="600" y2="250" stroke="#1a1714" stroke-width="8"/>
+        <line x1="200" y1="0" x2="200" y2="380" stroke="#1a1714" stroke-width="8"/>
+        <line x1="400" y1="0" x2="400" y2="380" stroke="#1a1714" stroke-width="8"/>
+        <!-- Road lines -->
+        <line x1="0" y1="130" x2="600" y2="130" stroke="#252219" stroke-width="1" stroke-dasharray="12,8"/>
+        <line x1="0" y1="250" x2="600" y2="250" stroke="#252219" stroke-width="1" stroke-dasharray="12,8"/>
+        <line x1="200" y1="0" x2="200" y2="380" stroke="#252219" stroke-width="1" stroke-dasharray="12,8"/>
+        <line x1="400" y1="0" x2="400" y2="380" stroke="#252219" stroke-width="1" stroke-dasharray="12,8"/>
+
+        <!-- DISTRICT 0: Downtown (center) -->
+        <g class="district-zone" onclick="selectDistrict(0)" id="zone-0">
+          <rect class="zone-fill" x="204" y="134" width="192" height="112" rx="2" fill="#2a2020"/>
+          <text class="zone-label" x="300" y="186">DOWNTOWN</text>
+          <text class="zone-sublabel" x="300" y="200" id="zone-sub-0">neutral</text>
+        </g>
+        <!-- DISTRICT 1: Northside -->
+        <g class="district-zone" onclick="selectDistrict(1)" id="zone-1">
+          <rect class="zone-fill" x="204" y="4" width="192" height="122" rx="2" fill="#1e2020"/>
+          <text class="zone-label" x="300" y="58">NORTHSIDE</text>
+          <text class="zone-sublabel" x="300" y="72" id="zone-sub-1">neutral</text>
+        </g>
+        <!-- DISTRICT 2: The Docks (left) -->
+        <g class="district-zone" onclick="selectDistrict(2)" id="zone-2">
+          <rect class="zone-fill" x="4" y="134" width="192" height="112" rx="2" fill="#1e2028"/>
+          <text class="zone-label" x="100" y="186">THE DOCKS</text>
+          <text class="zone-sublabel" x="100" y="200" id="zone-sub-2">neutral</text>
+        </g>
+        <!-- DISTRICT 3: Eastgate -->
+        <g class="district-zone" onclick="selectDistrict(3)" id="zone-3">
+          <rect class="zone-fill" x="404" y="134" width="192" height="112" rx="2" fill="#201e1e"/>
+          <text class="zone-label" x="500" y="186">EASTGATE</text>
+          <text class="zone-sublabel" x="500" y="200" id="zone-sub-3">neutral</text>
+        </g>
+        <!-- DISTRICT 4: Southport -->
+        <g class="district-zone" onclick="selectDistrict(4)" id="zone-4">
+          <rect class="zone-fill" x="204" y="254" width="192" height="122" rx="2" fill="#201e28"/>
+          <text class="zone-label" x="300" y="308">SOUTHPORT</text>
+          <text class="zone-sublabel" x="300" y="322" id="zone-sub-4">neutral</text>
+        </g>
+        <!-- DISTRICT 5: Westside -->
+        <g class="district-zone" onclick="selectDistrict(5)" id="zone-5">
+          <rect class="zone-fill" x="4" y="4" width="192" height="122" rx="2" fill="#201e20"/>
+          <text class="zone-label" x="100" y="58">WESTSIDE</text>
+          <text class="zone-sublabel" x="100" y="72" id="zone-sub-5">neutral</text>
+        </g>
+        <!-- DISTRICT 6: Industrial (bottom-left) -->
+        <g class="district-zone" onclick="selectDistrict(6)" id="zone-6">
+          <rect class="zone-fill" x="4" y="254" width="192" height="122" rx="2" fill="#201e1e"/>
+          <text class="zone-label" x="100" y="308">INDUSTRIAL</text>
+          <text class="zone-sublabel" x="100" y="322" id="zone-sub-6">neutral</text>
+        </g>
+        <!-- DISTRICT 7: Richlands (top-right) -->
+        <g class="district-zone" onclick="selectDistrict(7)" id="zone-7">
+          <rect class="zone-fill" x="404" y="4" width="192" height="122" rx="2" fill="#1e2020"/>
+          <text class="zone-label" x="500" y="58">RICHLANDS</text>
+          <text class="zone-sublabel" x="500" y="72" id="zone-sub-7">neutral</text>
+        </g>
+        <!-- DISTRICT 8: Bayfront (bottom-right) -->
+        <g class="district-zone" onclick="selectDistrict(8)" id="zone-8">
+          <rect class="zone-fill" x="404" y="254" width="192" height="122" rx="2" fill="#1e2028"/>
+          <text class="zone-label" x="500" y="308">BAYFRONT</text>
+          <text class="zone-sublabel" x="500" y="322" id="zone-sub-8">neutral</text>
+        </g>
+        <!-- Player marker -->
+        <circle id="player-marker" cx="300" cy="190" r="7" fill="#e8b830" stroke="#0e0c0a" stroke-width="2"/>
+        <circle id="player-pulse" cx="300" cy="190" r="12" fill="none" stroke="#e8b830" stroke-width="1" opacity=".4">
+          <animate attributeName="r" values="8;16;8" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".5;0;.5" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+    <div class="map-legend" id="mapLegend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--gold-light)"></div>YOU</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#888"></div>NEUTRAL</div>
+    </div>
+    <div id="district-info">
+      <div class="di-name" id="di-name">Select a district</div>
+      <div class="di-gang" id="di-gang" style="color:var(--mist)">Click any zone on the map</div>
+      <div class="di-actions" id="di-actions"></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- OPERATIONS -->
+    <div class="panel" id="actions-panel" style="display:none">
+      <div class="panel-title">Operations</div>
+      <button class="action-btn" onclick="crime('mugging')">
+        <span>🤜</span><span>Mug Civilian</span>
+        <span class="action-risk risk-low">LOW · $20–60</span>
+      </button>
+      <button class="action-btn" onclick="crime('store')">
+        <span>🏪</span><span>Rob Store</span>
+        <span class="action-risk risk-mid">MED · $80–180</span>
+      </button>
+      <button class="action-btn" onclick="crime('car')">
+        <span>🚗</span><span>Steal Car</span>
+        <span class="action-risk risk-high">HIGH · $200–500</span>
+      </button>
+      <button class="action-btn rest-btn" onclick="rest()">
+        <span>🛏</span><span>Rest Up</span>
+        <span class="action-risk risk-rest">RESTORE HP + ENERGY</span>
+      </button>
+    </div>
+
+    <!-- GANGS -->
+    <div class="panel" id="gang-panel" style="display:none">
+      <div class="panel-title">Gang Intel</div>
+      <div id="gang-list"></div>
+    </div>
+  </div>
+
+  <!-- MISSIONS -->
+  <div class="panel" id="missions-panel" style="display:none">
+    <div class="panel-title">Missions</div>
+    <div id="mission-list"></div>
+  </div>
+
+  <div class="two-col">
+    <!-- SHOP -->
+    <div class="panel" id="shop-panel" style="display:none">
+      <div class="panel-title">Black Market</div>
+      <div class="shop-grid">
+        <button class="shop-btn" onclick="buyItem('lockpick')">🔓 Lockpick<span class="shop-price">$150</span><span class="shop-desc">+15% store odds</span></button>
+        <button class="shop-btn" onclick="buyItem('gloves')">🧤 Gloves<span class="shop-price">$100</span><span class="shop-desc">+10% all odds</span></button>
+        <button class="shop-btn" onclick="buyItem('fakeid')">🪪 Fake ID<span class="shop-price">$200</span><span class="shop-desc">-2 heat on bust</span></button>
+        <button class="shop-btn" onclick="buyItem('weapon')">🔫 Piece<span class="shop-price">$350</span><span class="shop-desc">+20% attack power</span></button>
+        <button class="shop-btn" onclick="buyItem('vest')">🦺 Vest<span class="shop-price">$300</span><span class="shop-desc">-30% dmg taken</span></button>
+        <button class="shop-btn" onclick="buyItem('energy')">⚡ Energy Drink<span class="shop-price">$50</span><span class="shop-desc">+40 energy now</span></button>
+      </div>
+    </div>
+
+    <!-- CASINO -->
+    <div class="panel" id="casino-panel" style="display:none">
+      <div class="panel-title">Casino</div>
+      <div class="bet-row">
+        <span class="bet-label">BET $</span>
+        <input class="bet-input" id="betAmount" type="number" value="10" min="10" step="10">
+      </div>
+      <div class="three-col">
+        <button class="casino-btn red" onclick="casino('red')">◆ RED<span class="casino-odds">48% · ×2</span></button>
+        <button class="casino-btn blk" onclick="casino('black')">◆ BLACK<span class="casino-odds">48% · ×2</span></button>
+        <button class="casino-btn jpot" onclick="casino('jackpot')">★ JACKPOT<span class="casino-odds">5% · ×10</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="panel">
+    <div class="panel-title">Incident Log</div>
+    <div id="log"></div>
+  </div>
+
+</div><!-- /wrapper -->
+<script src="app.js"></script>
+</body>
+</html>
