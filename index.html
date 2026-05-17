@@ -354,28 +354,28 @@
   }
 
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    await createPlayerIfNotExists(user);
+  if (!user) {
+    await signInAnonymously(auth);
+    return;
+  }
 
-    console.log("Firebase ready:", user.uid);
+  await createPlayerIfNotExists(user);
 
-    window.currentUser = user;
+  console.log("Firebase ready:", user.uid);
+
+  window.currentUser = user;
+  window.firebaseReady = true;
+  window.gameStarted = false;
+  // 🚨 ALWAYS remove loading screen after auth
+  document.getElementById('loading-overlay')?.classList.add('hidden');
 
   const save = localStorage.getItem('mafia_v3_save');
 
-// IMPORTANT: DO NOT auto-start game
-window.firebaseReady = true;
-
-if (save) {
-  console.log("Save exists → showing CONTINUE button only");
-  document.getElementById('load-btn').style.display = 'block';
-} else {
-  console.log("No save → stay in start screen");
-}
-
-// DO NOT call startGame here anymore
+  if (save) {
+    document.getElementById('load-btn').style.display = 'block';
+    console.log("Save found → waiting for user input");
   } else {
-    await signInAnonymously(auth);
+    console.log("No save → ready for new game");
   }
 });
   
