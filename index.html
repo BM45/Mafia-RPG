@@ -353,10 +353,6 @@
     }
   }
 
-async function login() {
-  await signInAnonymously(auth);
-}
-
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     await createPlayerIfNotExists(user);
