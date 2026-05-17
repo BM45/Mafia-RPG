@@ -375,12 +375,6 @@
 }
   const loadBtn = document.getElementById("load-btn");
 const status = document.getElementById("start-msg");
-
-// button click login
-loginBtn.addEventListener("click", async () => {
-  const user = await signInAnonymously(auth);
-  status.innerText = "Logged in: " + user.user.uid;
-});
 </script>
   <script src="./app.js" defer></script>
 </body>
