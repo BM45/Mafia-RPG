@@ -320,27 +320,51 @@
 </div><!-- /wrapper -->
 <script src="./app.js" defer></script>
  <script type="module">
-  // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
   const firebaseConfig = {
     apiKey: "AIzaSyCX_OWxuXMwQbnHR054s2NDE6kXSe0ALoI",
     authDomain: "mafia-rpg-2b7b8.firebaseapp.com",
     projectId: "mafia-rpg-2b7b8",
     storageBucket: "mafia-rpg-2b7b8.firebasestorage.app",
     messagingSenderId: "323992907301",
-    appId: "1:323992907301:web:c74b41e42a68a7b7ce19cc",
-    measurementId: "G-BXY4VQ231F"
+    appId: "1:323992907301:web:c74b41e42a68a7b7ce19cc"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  async function createPlayerIfNotExists(user) {
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        username: "Player_" + user.uid.slice(0, 5),
+        cash: 1000,
+        xp: 0,
+        level: 1,
+        gangId: ""
+      });
+    }
+  }
+
+  async function login() {
+    await signInAnonymously(auth);
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      console.log("Logged in:", user.uid);
+      await createPlayerIfNotExists(user);
+      console.log("Player ready!");
+    } else {
+      await login();
+    }
+  });
 </script>
 </body>
 </html>
