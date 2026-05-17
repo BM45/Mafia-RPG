@@ -337,7 +337,48 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+window.saveToFirebase = async function(playerData) {
 
+  if (!window.currentUser) {
+    console.log("No user");
+    return;
+  }
+
+  try {
+
+    const ref = doc(db, "users", window.currentUser.uid);
+
+    await setDoc(ref, playerData, { merge: true });
+
+    console.log("Saved to Firebase");
+
+  } catch (err) {
+    console.error("Firebase save error:", err);
+  }
+};
+   window.loadFromFirebase = async function() {
+
+  if (!window.currentUser) return null;
+
+  try {
+
+    const ref = doc(db, "users", window.currentUser.uid);
+
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      return snap.data();
+    }
+
+    return null;
+
+  } catch (err) {
+
+    console.error("Load error:", err);
+    return null;
+
+  }
+};
   async function createPlayerIfNotExists(user) {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
