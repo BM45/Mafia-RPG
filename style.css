@@ -244,6 +244,26 @@ body{background:var(--ink);color:var(--bone);font-family:'Syne',sans-serif;min-h
 .online-badge{display:inline-block;width:7px;height:7px;border-radius:50%;background:#3a3528;margin-left:5px}
 .online-badge.online{background:var(--green-light)}
 
+/* NEW SYSTEMS */
+.item-card,.trade-card,.npc-card,.leader-row{background:var(--ash);border:1px solid #2e2a22;padding:12px;margin-bottom:8px}
+.item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:6px}
+.item-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;color:var(--paper)}
+.item-sub{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--mist);letter-spacing:1px;margin-top:2px}
+.item-price{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gold-light);white-space:nowrap}
+.item-desc{font-size:10px;color:var(--bone);line-height:1.5;margin-bottom:7px}
+.item-stats{display:flex;gap:8px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--mist);margin-bottom:8px}
+.trade-form{display:grid;gap:8px}
+.trade-select{background:var(--ash);border:1px solid #2e2a22;color:var(--bone);font-family:'JetBrains Mono',monospace;font-size:10px;padding:9px;width:100%}
+.leaderboard-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.leaderboard-tab{background:var(--ash);border:1px solid #2e2a22;color:var(--mist);font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1px;padding:6px 10px;cursor:pointer}
+.leaderboard-tab.active,.leaderboard-tab:hover{border-color:var(--gold);color:var(--gold-light)}
+.leader-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:10px}
+.leader-row.me{border-color:var(--gold)}
+.leader-rank{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold-light)}
+.leader-name{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;color:var(--paper)}
+.leader-sub{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--mist);letter-spacing:1px}
+.leader-score{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green-light);white-space:nowrap}
+
 /* ── MODAL ── */
 #modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
 #modal-overlay.open{opacity:1;pointer-events:all}
