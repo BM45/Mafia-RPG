@@ -357,18 +357,22 @@
     await signInAnonymously(auth);
   }
 
- onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
-  await createPlayerIfNotExists(user);
+    await createPlayerIfNotExists(user);
 
-  console.log("Firebase ready:", user.uid);
+    console.log("Firebase ready:", user.uid);
 
-  window.currentUser = user;
+    window.currentUser = user;
 
-  // START YOUR GAME HERE
-  if (typeof startGame === "function") {
-    startGame(user);
+    if (typeof startGame === "function") {
+      startGame(user);
+    }
+
+  } else {
+    await signInAnonymously(auth);
   }
+});
 
 } else {
   await signInAnonymously(auth);
