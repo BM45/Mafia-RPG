@@ -361,15 +361,19 @@ onAuthStateChanged(auth, async (user) => {
 
     window.currentUser = user;
 
-   const save = localStorage.getItem('mafia_v3_save');
+  const save = localStorage.getItem('mafia_v3_save');
+
+// IMPORTANT: DO NOT auto-start game
+window.firebaseReady = true;
 
 if (save) {
-  startGame(user);
+  console.log("Save exists → showing CONTINUE button only");
+  document.getElementById('load-btn').style.display = 'block';
 } else {
-  // stay in lobby, DO NOT start game
-  console.log("Waiting for character creation");
+  console.log("No save → stay in start screen");
 }
 
+// DO NOT call startGame here anymore
   } else {
     await signInAnonymously(auth);
   }
