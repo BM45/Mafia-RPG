@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAFIA RPG</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./style (1).css">
   <link rel="icon" href="data:,">
 </head>
 <body>
@@ -27,7 +27,12 @@
     <button class="nav-tab" onclick="switchTab('realestate')">REAL ESTATE</button>
     <button class="nav-tab" onclick="switchTab('missions')">MISSIONS</button>
     <button class="nav-tab" onclick="switchTab('market')">BLACK MARKET</button>
+    <button class="nav-tab" onclick="switchTab('armory')">GUN SHOP</button>
+    <button class="nav-tab" onclick="switchTab('luxury')">LUXURY</button>
     <button class="nav-tab" onclick="switchTab('casino')">CASINO</button>
+    <button class="nav-tab" onclick="switchTab('trading')">TRADING</button>
+    <button class="nav-tab" onclick="switchTab('npcs')">NPCS</button>
+    <button class="nav-tab" onclick="switchTab('leaderboard')">LEADERS</button>
     <button class="nav-tab" onclick="switchTab('shadownet')">SHADOWNET</button>
     <button class="nav-tab" onclick="switchTab('players')">PLAYERS</button>
   </div>
@@ -69,7 +74,7 @@
     <div id="start-inner" style="max-width:300px;margin:0 auto">
       <input class="name-input" id="playerName" type="text" placeholder="What do they call you?">
       <button class="btn-primary" onclick="createPlayer()">JOIN THE STREETS</button>
-      <button class="btn-secondary" id="load-btn" style="display:none" onclick="loadGame()">▶ CONTINUE SAVED GAME</button>
+      <button class="btn-secondary" id="load-btn" onclick="loadGame()">▶ CONTINUE SAVED GAME</button>
       <div id="start-msg" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mist);text-align:center;margin-top:8px"></div>
     </div>
   </div>
@@ -261,6 +266,34 @@
 </div>
 
 <!-- ════════ CASINO ════════ -->
+<!-- GUN SHOP -->
+<div class="tab-page" id="tab-armory">
+  <div class="g2">
+    <div class="panel">
+      <div class="panel-title">Gun Shop <span class="panel-title-right" id="gun-equipped-label">no weapon equipped</span></div>
+      <div id="gun-shop-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">My Weapons</div>
+      <div id="owned-gun-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LUXURY SHOP -->
+<div class="tab-page" id="tab-luxury">
+  <div class="g2">
+    <div class="panel">
+      <div class="panel-title">Luxury Market</div>
+      <div id="luxury-shop-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Collection <span class="panel-title-right" id="luxury-value-label">$0 value</span></div>
+      <div id="luxury-owned-list"></div>
+    </div>
+  </div>
+</div>
+
 <div class="tab-page" id="tab-casino">
   <div class="g2">
     <div class="panel">
@@ -279,6 +312,16 @@
         <button class="casino-btn" style="background:rgba(42,90,154,.14);border:1px solid var(--blue-light);color:var(--blue-light)" onclick="casino('sports')">⚽ SPORTS<span class="casino-odds">45% · ×2.2</span></button>
         <button class="casino-btn" style="background:rgba(58,122,64,.14);border:1px solid var(--green-light);color:var(--green-light)" onclick="casino('slots')">🎰 SLOTS<span class="casino-odds">20% · ×5</span></button>
       </div>
+      <div class="g3" style="margin-top:10px">
+        <button class="casino-btn" onclick="casino('blackjack')">BLACKJACK<span class="casino-odds">42% / x2.4</span></button>
+        <button class="casino-btn" onclick="casino('poker')">POKER<span class="casino-odds">30% / x4</span></button>
+        <button class="casino-btn" onclick="casino('roulette')">ROULETTE<span class="casino-odds">12% / x8</span></button>
+      </div>
+      <div class="g3" style="margin-top:10px">
+        <button class="casino-btn" onclick="casino('dice')">DICE<span class="casino-odds">50% / x1.9</span></button>
+        <button class="casino-btn" onclick="casino('baccarat')">BACCARAT<span class="casino-odds">46% / x2.1</span></button>
+        <button class="casino-btn" onclick="casino('horses')">HORSES<span class="casino-odds">25% / x5.5</span></button>
+      </div>
     </div>
     <div class="panel">
       <div class="panel-title">Casino Stats</div>
@@ -294,6 +337,53 @@
 </div>
 
 <!-- ════════ SHADOWNET ════════ -->
+<!-- TRADING -->
+<div class="tab-page" id="tab-trading">
+  <div class="g2">
+    <div class="panel">
+      <div class="panel-title">Trade Board</div>
+      <div id="trade-board"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Post Offer</div>
+      <div id="trade-create"></div>
+      <div style="margin-top:12px">
+        <div class="section-label">MY TRADE HISTORY</div>
+        <div id="trade-history"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NPCS -->
+<div class="tab-page" id="tab-npcs">
+  <div class="g2">
+    <div class="panel">
+      <div class="panel-title">Contacts</div>
+      <div id="npc-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Street Intel</div>
+      <div id="npc-intel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARDS -->
+<div class="tab-page" id="tab-leaderboard">
+  <div class="panel">
+    <div class="panel-title">Leaderboards <span class="panel-title-right" id="leaderboard-count-label">loading...</span></div>
+    <div class="leaderboard-tabs">
+      <button class="leaderboard-tab active" onclick="leaderboardTab('networth')">NET WORTH</button>
+      <button class="leaderboard-tab" onclick="leaderboardTab('respect')">RESPECT</button>
+      <button class="leaderboard-tab" onclick="leaderboardTab('turf')">TURF</button>
+      <button class="leaderboard-tab" onclick="leaderboardTab('cars')">CARS</button>
+      <button class="leaderboard-tab" onclick="leaderboardTab('level')">LEVEL</button>
+    </div>
+    <div id="leaderboard-list"></div>
+  </div>
+</div>
+
 <div class="tab-page" id="tab-shadownet">
   <div class="panel">
     <div class="panel-title">🌑 ShadowNet <span class="panel-title-right">underground social</span></div>
@@ -323,7 +413,7 @@
  <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCX_OWxuXMwQbnHR054s2NDE6kXSe0ALoI",
@@ -348,7 +438,7 @@ window.saveToFirebase = async function(playerData) {
 
     const ref = doc(db, "users", window.currentUser.uid);
 
-    await setDoc(ref, playerData, { merge: true });
+    await setDoc(ref, { ...playerData, updatedAt: Date.now() }, { merge: true });
 
     console.log("Saved to Firebase");
 
@@ -380,18 +470,8 @@ window.saveToFirebase = async function(playerData) {
   }
 };
   async function createPlayerIfNotExists(user) {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-
-    if (!snap.exists()) {
-      await setDoc(ref, {
-        username: "Player_" + user.uid.slice(0, 5),
-        cash: 1000,
-        xp: 0,
-        level: 1,
-        gangId: ""
-      });
-    }
+    // Saves are created by saveGame() so an empty account does not look like a playable save.
+    return user;
   }
 
 onAuthStateChanged(auth, async (user) => {
@@ -400,19 +480,20 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
+  window.currentUser = user;
   await createPlayerIfNotExists(user);
 
   console.log("Firebase ready:", user.uid);
 
-  window.currentUser = user;
   window.firebaseReady = true;
   window.gameStarted = false;
+  window.dispatchEvent(new Event('firebase-ready'));
   // 🚨 ALWAYS remove loading screen after auth
   document.getElementById('loading-overlay')?.classList.add('hidden');
+  document.getElementById('load-btn').style.display = 'block';
 
-  const save = localStorage.getItem('mafia_v3_save');
-
-  if (save) {
+  const localSave = localStorage.getItem('mafia_v3_save');
+  if (localSave) {
     document.getElementById('load-btn').style.display = 'block';
     console.log("Save found → waiting for user input");
   } else {
@@ -421,6 +502,6 @@ onAuthStateChanged(auth, async (user) => {
 });
   
 </script>
-  <script src="./app.js" defer></script>
+  <script src="./app (1).js" defer></script>
 </body>
 </html>
