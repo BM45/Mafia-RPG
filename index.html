@@ -375,7 +375,7 @@
 const status = document.getElementById("start-msg");
 
 // button click login
-load-btn.addEventListener("click", async () => {
+loadGame().addEventListener("click", async () => {
   const user = await signInAnonymously(auth);
   status.innerText = "Logged in: " + user.user.uid;
 });
