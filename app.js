@@ -8,7 +8,13 @@ const storage = window.storage || {
   async set(k,v,s){try{localStorage.setItem((s?'shared_':'')+k,v);return{value:v}}catch{return null}},
   async list(p,s){try{const keys=Object.keys(localStorage).filter(k=>k.startsWith((s?'shared_':'')+p));return{keys:keys.map(k=>k.replace(s?'shared_':'',''))}}catch{return{keys:[]}}}
 };
+window.startGame = function(user) {
+  $('loading-overlay').classList.add('hidden');
+  addLog('Welcome to the city. Build your empire.', 'info');
 
+  showGame?.();   // if you have it
+  renderAll?.();  // if you have it
+};
 // ═══════════════════════════════════════════════════════════════
 // AUDIO
 // ═══════════════════════════════════════════════════════════════
