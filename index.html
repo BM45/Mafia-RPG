@@ -357,6 +357,10 @@
     await signInAnonymously(auth);
   }
 
+async function login() {
+  await signInAnonymously(auth);
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     await createPlayerIfNotExists(user);
@@ -373,10 +377,6 @@ onAuthStateChanged(auth, async (user) => {
     await signInAnonymously(auth);
   }
 });
-
-} else {
-  await signInAnonymously(auth);
-}
   
 </script>
   <script src="./app.js" defer></script>
