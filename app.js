@@ -258,25 +258,53 @@ async function saveGame(){
   if(!player)return;
   const save={player,districtOwners,gangPowers,missions,garage,properties,garageLevel,casinoStats};
   localStorage.setItem('mafia_v3_save',JSON.stringify(save));
+  await window.saveToFirebase(player);
   await storage.set('player_save_'+playerId,JSON.stringify(save),false);
   await publishPlayerProfile();
   showToast('Saved','info');
 }
 
-async function loadGame(){
-  const raw=localStorage.getItem('mafia_v3_save');
-  if(!raw)return showToast('No save found','warn');
-  try{
-    const s=JSON.parse(raw);
-    player=s.player;districtOwners=s.districtOwners;gangPowers=s.gangPowers;
-    missions=s.missions||MISSION_DEFS.map(m=>({...m,done:false,active:false,progress:0,locked:!!m.req}));
-    garage=s.garage||[];properties=s.properties||[];garageLevel=s.garageLevel||0;
-    casinoStats=s.casinoStats||{won:0,lost:0,bigWin:0,streak:0};
-    showGame();startCooldown();renderAll();
-    addLog('Save loaded. Welcome back, '+player.name+'.','info');
-    showToast('Game loaded','info');
-    SFX.click();
-  }catch(e){showToast('Corrupt save','warn');}
+async function loadGame() {
+
+  try {
+
+    // Try Firebase first
+    const firebaseData = await window.loadFromFirebase();
+
+    if (firebaseData) {
+
+      player = firebaseData;
+
+      console.log("Loaded from Firebase");
+
+    } else {
+
+      // Fallback to localStorage
+      const save = localStorage.getItem("mafia_v3_save");
+
+      if (save) {
+        player = JSON.parse(save);
+        console.log("Loaded local save");
+      } else {
+        console.log("No save found");
+        return;
+      }
+    }
+
+    // Update UI after loading
+    updateUI();
+
+    // Show panels if needed
+    document.getElementById("stats-panel").style.display = "block";
+    document.getElementById("actions-panel").style.display = "block";
+    document.getElementById("log-panel").style.display = "block";
+    document.getElementById("start-screen").style.display = "none";
+
+  } catch (err) {
+
+    console.error("Load game error:", err);
+
+  }
 }
 
 async function publishPlayerProfile(){
