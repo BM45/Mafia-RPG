@@ -371,11 +371,11 @@
     await signInAnonymously(auth);
   }
 });
-   const loginBtn = document.getElementById("loginBtn");
-const status = document.getElementById("status");
+   const loginBtn = document.getElementById("load-btn");
+const status = document.getElementById("start-msg");
 
 // button click login
-loginBtn.addEventListener("click", async () => {
+load-btn.addEventListener("click", async () => {
   const user = await signInAnonymously(auth);
   status.innerText = "Logged in: " + user.user.uid;
 });
