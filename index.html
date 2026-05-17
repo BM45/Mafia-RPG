@@ -361,21 +361,18 @@
     await signInAnonymously(auth);
   }
 
-  onAuthStateChanged(auth, async (user) => {
+ onAuthStateChanged(auth, async (user) => {
   if (user) {
-    console.log("Logged in:", user.uid);
-
     await createPlayerIfNotExists(user);
 
-    document.getElementById("status").innerText =
-      "Player ready: " + user.uid;
+    window.firebaseReady = true;
 
-    // HERE is where your game starts
-    window.startGameReady = true;
+    // NOW start game
+    $('loading-overlay').classList.add('hidden');
+    addLog('Welcome to the city. Build your empire.', 'info');
 
   } else {
-    document.getElementById("status").innerText =
-      "Not logged in";
+    await signInAnonymously(auth);
   }
 });
    const loginBtn = document.getElementById("loginBtn");
