@@ -319,7 +319,7 @@
 </div>
 
 </div><!-- /wrapper -->
-<script src="./app.js" defer></script>
+
  <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
@@ -359,26 +359,29 @@
 
  onAuthStateChanged(auth, async (user) => {
   if (user) {
-    await createPlayerIfNotExists(user);
+  await createPlayerIfNotExists(user);
 
-    window.firebaseReady = true;
+  console.log("Firebase ready:", user.uid);
 
-    // NOW start game
-    $('loading-overlay').classList.add('hidden');
-    addLog('Welcome to the city. Build your empire.', 'info');
+  window.currentUser = user;
 
-  } else {
-    await signInAnonymously(auth);
+  // START YOUR GAME HERE
+  if (typeof startGame === "function") {
+    startGame(user);
   }
-});
-   const loginBtn = document.getElementById("load-btn");
+
+} else {
+  await signInAnonymously(auth);
+}
+  const loadBtn = document.getElementById("load-btn");
 const status = document.getElementById("start-msg");
 
 // button click login
-loadGame().addEventListener("click", async () => {
+loginBtn.addEventListener("click", async () => {
   const user = await signInAnonymously(auth);
   status.innerText = "Logged in: " + user.user.uid;
 });
 </script>
+  <script src="./app.js" defer></script>
 </body>
 </html>
