@@ -15,7 +15,11 @@
   <div class="loading-sub">connecting to the network...</div>
   <div class="loading-bar"><div class="loading-fill"></div></div>
 </div>
+<h1>Mafia RPG</h1>
 
+<button id="loginBtn">Play Game</button>
+
+<div id="status"></div>
 <!-- Nav -->
 <nav id="main-nav">
   <div class="nav-brand">MAFIA</div>
@@ -357,14 +361,30 @@
   }
 
   onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      console.log("Logged in:", user.uid);
-      await createPlayerIfNotExists(user);
-      console.log("Player ready!");
-    } else {
-      await login();
-    }
-  });
+  if (user) {
+    console.log("Logged in:", user.uid);
+
+    await createPlayerIfNotExists(user);
+
+    document.getElementById("status").innerText =
+      "Player ready: " + user.uid;
+
+    // HERE is where your game starts
+    startGame(user);
+
+  } else {
+    document.getElementById("status").innerText =
+      "Not logged in";
+  }
+});
+   const loginBtn = document.getElementById("loginBtn");
+const status = document.getElementById("status");
+
+// button click login
+loginBtn.addEventListener("click", async () => {
+  const user = await signInAnonymously(auth);
+  status.innerText = "Logged in: " + user.user.uid;
+});
 </script>
 </body>
 </html>
