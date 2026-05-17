@@ -361,9 +361,14 @@ onAuthStateChanged(auth, async (user) => {
 
     window.currentUser = user;
 
-    if (typeof startGame === "function") {
-      startGame(user);
-    }
+   const save = localStorage.getItem('mafia_v3_save');
+
+if (save) {
+  startGame(user);
+} else {
+  // stay in lobby, DO NOT start game
+  console.log("Waiting for character creation");
+}
 
   } else {
     await signInAnonymously(auth);
