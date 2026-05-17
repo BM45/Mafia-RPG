@@ -1,4 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
+
+window.firebaseReady = false;
 // STORAGE — artifact persistent storage API
 // ═══════════════════════════════════════════════════════════════
 const storage = window.storage || {
@@ -156,21 +158,26 @@ const $=id=>document.getElementById(id);
 // ═══════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded',async()=>{
+window.addEventListener('DOMContentLoaded', async () => {
   buildRepTrack();
-  playerId='pid_'+Math.random().toString(36).slice(2,10);
-  // Show load button if save exists
-  try{
-    const s=await storage.get('player_save_'+playerId,false);
-    const ls=localStorage.getItem('mafia_local_pid');
-    if(ls){playerId=ls;}
-    const localSave=localStorage.getItem('mafia_v3_save');
-    if(localSave){$('load-btn').style.display='block';}
-  }catch(e){}
-  localStorage.setItem('mafia_local_pid',playerId);
-  // Hide loader
-  setTimeout(()=>{$('loading-overlay').classList.add('hidden');addLog('Welcome to the city. Build your empire.','info');},1200);
-  // Load shadow feed
+
+  playerId = 'pid_' + Math.random().toString(36).slice(2,10);
+
+  try {
+    const s = await storage.get('player_save_' + playerId, false);
+    const ls = localStorage.getItem('mafia_local_pid');
+    if (ls) playerId = ls;
+
+    const localSave = localStorage.getItem('mafia_v3_save');
+    if (localSave) $('load-btn').style.display = 'block';
+
+  } catch (e) {}
+
+  localStorage.setItem('mafia_local_pid', playerId);
+
+  // ❌ DO NOT start game yet
+  // DO NOT hide loading screen here anymore
+
   loadShadowFeed();
   loadAllPlayers();
 });
